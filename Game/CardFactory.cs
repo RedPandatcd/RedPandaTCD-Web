@@ -8,7 +8,7 @@ public static class CardFactory
 
     public static Card CreateSageRedPanda() => new Card
     {
-        Id = "CM1",
+        Id = "CN3",
         Name = "Sage Red Panda",
         Type = CardType.Character,
         Archetype = Archetype.Neutral,
@@ -28,7 +28,7 @@ public static class CardFactory
 
     public static Card CreateSorcererRedPanda() => new Card
     {
-        Id = "CM2",
+        Id = "CM1",
         Name = "Sorcerer Red Panda",
         Type = CardType.Character,
         Archetype = Archetype.Magic,
@@ -48,7 +48,7 @@ public static class CardFactory
 
     public static Card CreateGuardianRedPanda() => new Card
     {
-        Id = "CP1",
+        Id = "CN4",
         Name = "Guardian Red Panda",
         Type = CardType.Character,
         Archetype = Archetype.Neutral,
@@ -68,7 +68,7 @@ public static class CardFactory
 
     public static Card CreateBerserkerRedPanda() => new Card
     {
-        Id = "CP2",
+        Id = "CP1",
         Name = "Berserker Red Panda",
         Type = CardType.Character,
         Archetype = Archetype.Physical,

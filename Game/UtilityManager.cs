@@ -203,7 +203,7 @@ public static class UtilityManager
 
                 BattleLog.WriteReplay(
                     $"{player.Name} used Shield Booster " +
-                    $"(+2 Shield, {player.Shield} Total)",
+                    $"(+3 Shield, {player.Shield} Total)",
                     BattleLog.CurrentTurnNumber,
                     BattleLog.CurrentPlayerIndex,
                     BattleLogEventType.Utility,

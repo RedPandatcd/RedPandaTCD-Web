@@ -77,7 +77,12 @@
                         ◆ PIERCING
                     </span>
                 }
-
+                @if (Card.IgnoresShield)
+                    {
+                        <span class="cabinet-trait ignores-shield">
+                            ◈ IGNORE SHIELD
+                        </span>
+                    }
                 @if (Card.Hits > 1)
                 {
                     <span class="trait multi-hit">
@@ -341,6 +346,12 @@
                             {
                                 <span class="cabinet-trait standard">
                                     STANDARD ATTACK
+                                </span>
+                            }
+                            @if (Card.IgnoresShield)
+                             {
+                                <span class="cabinet-trait ignores-shield">
+                                        ◈ IGNORE SHIELD
                                 </span>
                             }
                         </div>
@@ -1086,7 +1097,14 @@
     border-color: #ca8443;
     color: #f1b16e;
 }
+.trait.ignores-shield {
+    color: #ffb86b;
+}
 
+.cabinet-trait.ignores-shield {
+    border-color: #ca8443;
+    color: #f1b16e;
+}
 .cabinet-trait.multi-hit {
     border-color: #6588b7;
     color: #9fc8ff;
