@@ -2,15 +2,106 @@ namespace RedPandaTCD_Web.Game;
 
 public static class DeckBuilder
 {
+    // ==========================
+    // ATTACK BUDGET
+    // ==========================
+    // Attack value =
+    //   (Damage x Hits)
+    //   + MultiHit / Piercing / Ignore Shield points
+    //   + MatchingArchetypeBonus (once per attack)
+    // Deck budget = BudgetPerAttack x number of attacks.
+    // Everything is read from the Card fields, so new
+    // attacks are valued automatically.
+
+    public const decimal BudgetPerAttack = 5.2m;
+    public const decimal MultiHitValue = 1.5m;
+    public const decimal PiercingValue = 1.2m;
+    public const decimal IgnoreShieldValue = 2.0m;
+    public const decimal MatchingArchetypeBonus = 0.3m;
+
+    public sealed record AttackBudgetStatus(
+        int AttackCount,
+        decimal Total,
+        decimal Budget)
+    {
+        public decimal Remaining => Budget - Total;
+
+        public bool IsWithinBudget => Total <= Budget;
+    }
+
+    public static bool HasInvalidKeywordCombo(
+        Card attack)
+    {
+        return attack.IsPiercing &&
+               attack.IgnoresShield;
+    }
+
+    public static decimal GetAttackValue(
+        Card attack,
+        IEnumerable<Card> deckCards)
+    {
+        decimal value =
+            attack.Damage * attack.Hits;
+
+        if (attack.Hits > 1)
+        {
+            value += MultiHitValue;
+        }
+
+        // Ignore Shield makes Piercing irrelevant,
+        // so the two never stack.
+        if (attack.IgnoresShield)
+        {
+            value += IgnoreShieldValue;
+        }
+        else if (attack.IsPiercing)
+        {
+            value += PiercingValue;
+        }
+
+        // Neutral never matches. One bonus per attack,
+        // no matter how many characters match.
+        if (attack.Archetype != Archetype.Neutral &&
+            deckCards.Any(c =>
+                c.Type == CardType.Character &&
+                c.Archetype == attack.Archetype))
+        {
+            value += MatchingArchetypeBonus;
+        }
+
+        return value;
+    }
+
+    public static AttackBudgetStatus GetAttackBudgetStatus(
+        Deck deck)
+    {
+        List<Card> attacks =
+            deck.Cards
+                .Where(c =>
+                    c.Type == CardType.Attack)
+                .ToList();
+
+        decimal total =
+            attacks.Sum(a =>
+                GetAttackValue(
+                    a,
+                    deck.Cards));
+
+        return new AttackBudgetStatus(
+            attacks.Count,
+            total,
+            attacks.Count * BudgetPerAttack);
+    }
+
     public static bool ValidateDeck(
         Deck deck,
         out string errorMessage)
     {
-        if (deck.Cards.Count < 10 ||
+        if (deck.Cards.Count < 12 ||
             deck.Cards.Count > 15)
         {
             errorMessage =
-                "Deck must contain 10-15 cards.";
+                "Deck must contain 12-15 cards.";
 
             return false;
         }
@@ -64,16 +155,43 @@ public static class DeckBuilder
             return false;
         }
 
+        if (attacks.Any(HasInvalidKeywordCombo))
+        {
+            errorMessage =
+                "An Attack cannot have both Piercing and Ignore Shield.";
+
+            return false;
+        }
+
+        AttackBudgetStatus budget =
+            GetAttackBudgetStatus(deck);
+
+        if (!budget.IsWithinBudget)
+        {
+            errorMessage =
+                "Attack budget exceeded (" +
+                budget.Total.ToString(
+                    "0.0",
+                    System.Globalization.CultureInfo.InvariantCulture) +
+                " / " +
+                budget.Budget.ToString(
+                    "0.0",
+                    System.Globalization.CultureInfo.InvariantCulture) +
+                ").";
+
+            return false;
+        }
+
         List<Card> utilities =
             deck.Cards
                 .Where(c =>
                     c.Type == CardType.Utility)
                 .ToList();
 
-        if (utilities.Count > 6)
+        if (utilities.Count > 5)
         {
             errorMessage =
-                "Maximum 6 Utilities.";
+                "Maximum 5 Utilities.";
 
             return false;
         }

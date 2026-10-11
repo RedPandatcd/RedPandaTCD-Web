@@ -57,8 +57,8 @@ public static class TutorialManager
             "AM3",
             "AM6",
             "AP4",
-            "AN1",
-            "AN2",
+            "AP7",
+            "AM7",
 "UM1",
 "UN1",
 "UN4",
@@ -74,11 +74,11 @@ public static readonly IReadOnlyList<string>
         "AM6",
         "AP4",
         "AM3",
-        "AN1",
+        "AP7",
         "CN1",
         "UN4",
         "UN1",
-        "AN2",
+        "AM7",
         "UM2",
         "UN3"
     };
@@ -2114,8 +2114,8 @@ public static string GetLearnToPlayDeckInstruction(
 "AM3" =>
     "Your next card is Ice Shards.\n\nMagic • Attack\n\nUse the Attacks and Magic filters below to find it quickly, then press + to add it to your Tutorial Deck.",
 
-"AN1" =>
-    "Your next card is Pounce.\n\nNeutral • Attack\n\nUse the Attacks and Neutral filters below to find it quickly, then press + to add it to your Tutorial Deck.",
+"AP7" =>
+    "Your next card is Pounce.\n\nPhysical • Attack\n\nUse the Attacks and Physical filters below to find it quickly, then press + to add it to your Tutorial Deck.",
 
 "CN1" =>
     "Your next card is Wanderer Red Panda.\n\nNeutral • Character\n\nUse the Characters and Neutral filters below to find it quickly, then press + to add it to your Tutorial Deck.",
@@ -2126,8 +2126,8 @@ public static string GetLearnToPlayDeckInstruction(
 "UN1" =>
     "Your next card is Shield Booster.\n\nNeutral • Utility\n\nUse the Utilities and Neutral filters below to find it quickly, then press + to add it to your Tutorial Deck.",
 
-"AN2" =>
-    "Your next card is Chain Lightning.\n\nNeutral • Attack\n\nUse the Attacks and Neutral filters below to find it quickly, then press + to add it to your Tutorial Deck.",
+"AM7" =>
+    "Your next card is Chain Lightning.\n\nMagic • Attack\n\nUse the Attacks and Magic filters below to find it quickly, then press + to add it to your Tutorial Deck.",
 
 "UM2" =>
     "Your next card is Energy Drain.\n\nMagic • Utility\n\nUse the Utilities and Magic filters below to find it quickly, then press + to add it to your Tutorial Deck.",

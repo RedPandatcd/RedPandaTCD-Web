@@ -17,8 +17,9 @@ public class Card
     public int HpValue { get; set; }
 
     public bool IsPiercing { get; set; }
+    public bool IgnoresShield { get; set; }
     public bool InstantFatigue { get; set; }
-
+    
     public string Description { get; set; } = "";
     public string ActiveAbility { get; set; } = "";
 
@@ -43,13 +44,14 @@ public class Card
             ShieldValue = ShieldValue,
             HpValue = HpValue,
             IsPiercing = IsPiercing,
-            InstantFatigue = InstantFatigue,
+            IgnoresShield = IgnoresShield,
             Description = Description,
             ActiveAbility = ActiveAbility,
             PassiveAbilities =
                 new List<string>(PassiveAbilities),
             Priority = Priority,
-            AbilityCooldown = AbilityCooldown
+            AbilityCooldown = AbilityCooldown,
+            InstantFatigue = InstantFatigue
         };
     }
 }

@@ -45,7 +45,7 @@ public static class BattleStatusManager
                     "discount",
                     "Discount",
                     BattleStatusTone.Positive,
-                    "The next Attack placement costs 1 less Energy."));
+                    "All Energy costs are reduced by 1 this turn."));
         }
         if (player.TemporaryAttackBonus > 0)
         {

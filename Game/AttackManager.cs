@@ -43,6 +43,7 @@ public static class AttackManager
             slotNumber == 1
                 ? attacker.AttackSlot1TotalUses
                 : attacker.AttackSlot2TotalUses;
+        useCost = attacker.GetEnergyCost(useCost);
         if (attacker.Energy < useCost)
         {
             return false;
@@ -351,6 +352,11 @@ public static class AttackManager
                     BattleLog.GetOpponentPlayerIndex(),
                 amount: 0);
             return false;
+        }
+        if (attack.IgnoresShield)
+        {
+            DamageCharacterOrEnergy(defender, damage, attack);
+            return true;
         }
         if (piercing)
         {

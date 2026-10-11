@@ -11,7 +11,7 @@ public static class CardFactory
         Id = "CM1",
         Name = "Sage Red Panda",
         Type = CardType.Character,
-        Archetype = Archetype.Magic,
+        Archetype = Archetype.Neutral,
         Cost = 5,
         HpValue = 12,
         ShieldValue = 7,
@@ -51,7 +51,7 @@ public static class CardFactory
         Id = "CP1",
         Name = "Guardian Red Panda",
         Type = CardType.Character,
-        Archetype = Archetype.Physical,
+        Archetype = Archetype.Neutral,
         Cost = 5,
         HpValue = 12,
         ShieldValue = 7,
@@ -147,9 +147,10 @@ public static class CardFactory
         Name = "Arcane Bullets",
         Type = CardType.Attack,
         Archetype = Archetype.Magic,
-        Cost = 2,
-        Damage = 1,
-        Hits = 2
+        Cost = 4,
+        Damage = 2,
+        Hits = 2,
+        IsPiercing = true
     };
 
     public static Card CreateIceShards() => new Card
@@ -198,14 +199,15 @@ public static class CardFactory
     // PHYSICAL ATTACKS
     // ==========================
 
-    public static Card CreateSlash() => new Card
+    public static Card CreateStab() => new Card
     {
         Id = "AP1",
-        Name = "Slash",
+        Name = "Stab",
         Type = CardType.Attack,
         Archetype = Archetype.Physical,
         Cost = 2,
-        Damage = 2
+        Damage = 2,
+        IsPiercing = true
     };
 
     public static Card CreateDoubleClaw() => new Card
@@ -260,55 +262,55 @@ public static class CardFactory
         Archetype = Archetype.Physical,
         Cost = 7,
         Damage = 3,
-        Hits = 2,
-        InstantFatigue = true
+        Hits = 2
     };
 
     // ==========================
-    // NEUTRAL ATTACKS
+    // PHYSICAL ATTACKS (CONTINUED)
     // ==========================
 
     public static Card CreatePounce() => new Card
     {
-        Id = "AN1",
+        Id = "AP7",
         Name = "Pounce",
         Type = CardType.Attack,
-        Archetype = Archetype.Neutral,
+        Archetype = Archetype.Physical,
         Cost = 2,
         Damage = 2
     };
 
     public static Card CreateChainLightning() => new Card
     {
-        Id = "AN2",
+        Id = "AM7",
         Name = "Chain Lightning",
         Type = CardType.Attack,
-        Archetype = Archetype.Neutral,
+        Archetype = Archetype.Magic,
         Cost = 2,
         Damage = 1,
-        Hits = 2
+        Hits = 2,
+        IsPiercing = true
     };
 
     public static Card CreateGuardBreak() => new Card
     {
-        Id = "AN3",
-        Name = "Guard Break",
+        Id = "AP8",
+        Name = "Slip-Blade",
         Type = CardType.Attack,
-        Archetype = Archetype.Neutral,
+        Archetype = Archetype.Physical,
         Cost = 6,
-        Damage = 6,
-        IsPiercing = true
+        Damage = 4,
+        Hits = 1,
+        IgnoresShield = true
     };
 
     public static Card CreateFrostNova() => new Card
     {
-        Id = "AN4",
+        Id = "AM8",
         Name = "Frost Nova",
         Type = CardType.Attack,
-        Archetype = Archetype.Neutral,
+        Archetype = Archetype.Magic,
         Cost = 5,
-        Damage = 7,
-        InstantFatigue = true
+        Damage = 7
     };
 
     // ==========================
@@ -339,7 +341,7 @@ public static class CardFactory
         Name = "Attack Amplifier",
         Type = CardType.Utility,
         Archetype = Archetype.Physical,
-        Cost = 1
+        Cost = 0
     };
 
     public static Card CreateDefensiveStance() => new Card
@@ -348,7 +350,7 @@ public static class CardFactory
         Name = "Defensive Stance",
         Type = CardType.Utility,
         Archetype = Archetype.Physical,
-        Cost = 2
+        Cost = 0
     };
 
     public static Card CreateShieldBooster() => new Card
@@ -357,17 +359,17 @@ public static class CardFactory
         Name = "Shield Booster",
         Type = CardType.Utility,
         Archetype = Archetype.Neutral,
-        Cost = 1
+        Cost = 0
     };
 
-    public static Card CreateFortify() => new Card
-    {
-        Id = "UN2",
-        Name = "Fortify",
-        Type = CardType.Utility,
-        Archetype = Archetype.Neutral,
-        Cost = 2
-    };
+        public static Card CreateShieldBreaker() => new Card
+        {
+            Id = "UN2",
+            Name = "Shield Breaker",
+            Type = CardType.Utility,
+            Archetype = Archetype.Neutral,
+            Cost = 2
+        };
 
     public static Card CreateDiscountCoupon() => new Card
     {
@@ -409,7 +411,7 @@ public static class CardFactory
             CreateManaBurst(),
             CreateFireball(),
 
-            CreateSlash(),
+            CreateStab(),
             CreateDoubleClaw(),
             CreateDoubleThrust(),
             CreatePiercingStrike(),
@@ -426,7 +428,7 @@ public static class CardFactory
             CreateAttackAmplifier(),
             CreateDefensiveStance(),
             CreateShieldBooster(),
-            CreateFortify(),
+            CreateShieldBreaker(),
             CreateDiscountCoupon(),
             CreateDiscardForEnergy()
         };

@@ -141,7 +141,7 @@
                 <div class="deck-summary">
                     <span>Characters: <strong>@CharacterCount</strong></span>
                     <span>Attacks: <strong>@AttackCount</strong></span>
-                    <span>Utilities: <strong>@UtilityCount / 6</strong></span>
+                    <span>Utilities: <strong>@UtilityCount / 5</strong></span>
                 </div>
 
                 @if (workingDeck.Cards.Count == 0)
@@ -780,7 +780,7 @@ else
         {
             CardType.Character => copies < 1 && CharacterCount < 2,
             CardType.Attack => copies < 2,
-            CardType.Utility => UtilityCount < 6 && copies < 1,
+            CardType.Utility => UtilityCount < 5 && copies < 1,
             _ => false
         };
     }

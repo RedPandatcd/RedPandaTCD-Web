@@ -74,17 +74,38 @@
 
                 @if (IdentityTraits.Count > 0)
                 {
-                    <div class="identity-features" aria-label="Attack identity">
+                    <div class="identity-features @(ShowIdentityLabels ? "with-labels" : "icons-only")"
+                         aria-label="Attack identity">
                         @foreach (AttackIdentityTrait trait in IdentityTraits)
                         {
-                            <div class="identity-feature @trait.CssClass">
+                            <div class="identity-feature @trait.CssClass"
+                                 title="@trait.Label"
+                                 aria-label="@trait.Label">
                                 <span class="identity-feature-icon" aria-hidden="true">
-                                    @trait.Icon
+                                    @if (trait.CssClass == "trait-multi-hit")
+                                    {
+                                        <svg viewBox="0 0 512 512" focusable="false" aria-hidden="true">
+                                            <path fill="currentColor" d="m182.885 16.2l-1.73 57.015l51.257 47.226l8.063-23.036zm-68.537 65.073v.004l77.75 61.625l28.797-8.062l-57.018-52.986l-49.53-.58zM89.32 101.6l1.225 56.375l55.762 56.373l9.19-30.637zm159.496 33.992l-15.552 10.363c19.852 29.796 29.86 65.31 28.07 103.537l-.182.016l-1.406 18.824l.06-.004c-3.512 49.992 11.5 96.754 41.26 133.654l-30.218 16.368l62.177 19.548l-38.877 19.432l153.995 32.77l-98.457-122.86l.132 55.44c-50.335-36.216-76.608-92.807-71.142-155.975l.078-.006l.22-3.1c.025-.26.047-.517.075-.776c4.974-46.64-6.008-90.873-30.234-127.232zm-171.14 36.472l-57.6 2.454l87.012 61.275l23.898-9.19zm77.482 51.54l-10.05 15.757c28.25 18.023 61.034 28.177 95.874 29.265l1.395-18.648c-31.888-.83-61.58-10.016-87.22-26.372zm143.664 24.207l-1.312 18.602c52.536 1.886 99.042 26.41 130.82 68.754h-47.113L497.91 427.9l-31.62-145.66l-19.546 39.588l-18.7-59.478l-15.747 29.07c-31.726-26.472-71.01-41.83-113.475-43.61z" />
+                                        </svg>
+                                    }
+                                    else if (trait.CssClass == "trait-ignore-shield")
+                                    {
+                                        <svg class="ignore-shield-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                            <path d="M17.67 17.667A12 12 0 0 1 12 21A12 12 0 0 1 3.5 6c.794.036 1.583-.006 2.357-.124m3.128-.926A12 12 0 0 0 12 3a12 12 0 0 0 8.5 3a12 12 0 0 1-1.116 9.376M3 3l18 18" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        @trait.Icon
+                                    }
                                 </span>
 
-                                <strong class="identity-feature-label">
-                                    @trait.Label
-                                </strong>
+                                @if (ShowIdentityLabels)
+                                {
+                                    <strong class="identity-feature-label">
+                                        @trait.Label
+                                    </strong>
+                                }
                             </div>
                         }
                     </div>
@@ -375,6 +396,12 @@
         line-height: 1;
     }
 
+    .archetype-symbol svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
     .archetype-chip.archetype-magic {
         background: #386fc8;
     }
@@ -444,46 +471,51 @@
 
     .identity-features {
         min-height: 32px;
+        max-height: 36px;
 
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         justify-content: center;
-        gap: 5px;
+        gap: 7px;
+
+        overflow: hidden;
     }
 
     .identity-feature {
         min-width: 0;
-        padding: 4px 8px;
+        min-height: 28px;
+        padding: 3px 7px;
 
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 5px;
 
-        border: 1px solid rgba(79, 74, 68, 0.24);
-        border-radius: 7px;
+        border: 1px solid rgba(79, 74, 68, 0.3);
+        border-radius: 8px;
 
         background: rgba(67, 58, 48, 0.085);
         color: #443e38;
     }
 
     .identity-feature-icon {
-        width: 19px;
-        height: 19px;
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
 
         display: grid;
         place-items: center;
-        flex: 0 0 auto;
 
-        border-radius: 50%;
+        border: 1px solid currentColor;
+        border-radius: 7px;
+        background: rgba(48, 57, 64, 0.08);
+    }
 
-        background: rgba(48, 57, 64, 0.11);
-        color: #315f80;
-
-        font-size: 11px;
-        font-weight: 900;
-        line-height: 1;
+    .identity-feature-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
     }
 
     .identity-feature-label {
@@ -495,19 +527,99 @@
         white-space: nowrap;
     }
 
-    .identity-feature.trait-piercing .identity-feature-icon {
-        color: #2876a8;
-        background: rgba(40, 118, 168, 0.13);
+    /* Multi-Hit: violet, repeated strike marks */
+    .identity-feature.trait-multi-hit {
+        border-color: #8a70cf;
+        background: #eee7ff;
+        color: #6843b2;
     }
 
     .identity-feature.trait-multi-hit .identity-feature-icon {
-        color: #7359b4;
-        background: rgba(115, 89, 180, 0.13);
+        border-radius: 50%;
+    }
+
+    /* Piercing: blue, point passing through a ring */
+    .identity-feature.trait-piercing {
+        border-color: #4196c6;
+        background: #e0f3ff;
+        color: #176b9b;
+    }
+
+    .identity-feature.trait-piercing .identity-feature-icon {
+        border-radius: 50%;
+    }
+
+    .ignore-shield-svg {
+        width: 1.25em;
+        height: 1.25em;
+        display: inline-block;
+        vertical-align: middle;
+        flex: 0 0 auto;
+    }
+
+    .overlapped-effect-icon {
+        position: relative;
+        display: inline-block;
+        width: 1.45em;
+        height: 1.35em;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
+    .overlapped-effect-icon .effect-base {
+        position: absolute;
+        left: 0;
+        top: 0;
+        font-size: 1.05em;
+    }
+
+    .overlapped-effect-icon .effect-overlay {
+        position: absolute;
+        right: -0.12em;
+        bottom: -0.08em;
+        font-size: .72em;
+        line-height: 1;
+        filter: drop-shadow(0 0 1px #fff);
+    }
+
+    /* Ignore Shield: red, crossed shield */
+    .identity-feature.trait-ignore-shield {
+        border-color: #c65353;
+        background: #ffe5e2;
+        color: #ad2929;
+    }
+
+    .identity-feature.trait-ignore-shield .identity-feature-icon {
+        border-radius: 5px 5px 8px 8px;
+    }
+
+    /* Instant Fatigue: orange lightning emblem */
+    .identity-feature.trait-instant-fatigue {
+        border-color: #d18b40;
+        background: #fff0d8;
+        color: #a85a13;
     }
 
     .identity-feature.trait-instant-fatigue .identity-feature-icon {
-        color: #bd424a;
-        background: rgba(189, 66, 74, 0.13);
+        border-radius: 5px;
+    }
+
+    /* With multiple traits, show only the recognizable logos. */
+    .identity-features.icons-only .identity-feature {
+        width: 32px;
+        height: 32px;
+        min-height: 32px;
+        padding: 3px;
+        flex: 0 0 32px;
+        border-width: 1.5px;
+    }
+
+    .identity-features.icons-only .identity-feature-icon {
+        width: 25px;
+        height: 25px;
+        flex-basis: 25px;
+        border: 0;
+        background: transparent;
     }
 
     /* =====================================================
@@ -805,6 +917,8 @@
         string Icon,
         string CssClass);
 
+    private bool ShowIdentityLabels => IdentityTraits.Count == 1;
+
     private IReadOnlyList<AttackIdentityTrait> IdentityTraits
     {
         get
@@ -816,22 +930,33 @@
                 return traits;
             }
 
-            if (Attack.IsPiercing)
-            {
-                traits.Add(
-                    new AttackIdentityTrait(
-                        "Piercing",
-                        "◆",
-                        "trait-piercing"));
-            }
-
             if (Attack.Hits > 1)
             {
                 traits.Add(
                     new AttackIdentityTrait(
                         "Multi-Hit",
-                        "✦",
+                        "",
                         "trait-multi-hit"));
+            }
+
+            if (Attack.IsPiercing)
+            {
+                traits.Add(
+                    new AttackIdentityTrait(
+                        "Piercing",
+                        "🗡️",
+                        "trait-piercing"));
+            }
+
+            // Use the card's actual gameplay property so any attack that
+            // ignores Shield automatically receives the correct icon.
+            if (Attack.IgnoresShield)
+            {
+                traits.Add(
+                    new AttackIdentityTrait(
+                        "Ignore Shield",
+                        "",
+                        "trait-ignore-shield"));
             }
 
             if (Attack.InstantFatigue)
@@ -839,7 +964,7 @@
                 traits.Add(
                     new AttackIdentityTrait(
                         "Instant Fatigue",
-                        "!",
+                        "⚡",
                         "trait-instant-fatigue"));
             }
 
@@ -862,16 +987,6 @@
         if (Attack == null)
         {
             return "";
-        }
-
-        if (Attack.IsPiercing)
-        {
-            return "◆";
-        }
-
-        if (Attack.Hits > 1)
-        {
-            return "✦";
         }
 
         return Attack.Archetype switch

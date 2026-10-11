@@ -63,6 +63,11 @@ public bool AttackSlot2UsedThisPhase { get; set; }
 
     public bool DiscountActive { get; set; }
 
+    public int GetEnergyCost(int baseCost)
+    {
+        return Math.Max(0, baseCost - (DiscountActive ? 1 : 0));
+    }
+
     public int EnergyDrainedThisPhaseCount { get; set; }
 
     public int ReorderMovesThisPhase { get; set; }

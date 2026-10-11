@@ -20,6 +20,8 @@ public static class StarterDeckFactory
         deck.Cards.Add(CardFactory.CreateMysticSpike());
         deck.Cards.Add(CardFactory.CreateManaBurst());
         deck.Cards.Add(CardFactory.CreateEnergyDrain());
+        deck.Cards.Add(CardFactory.CreateDoubleClaw());
+        deck.Cards.Add(CardFactory.CreateManaPulses());
 
         return deck;
     }
@@ -33,15 +35,17 @@ public static class StarterDeckFactory
         };
 
         deck.Cards.Add(CardFactory.CreateBerserkerRedPanda());
-        deck.Cards.Add(CardFactory.CreateSlash());
+        deck.Cards.Add(CardFactory.CreateStab());
         deck.Cards.Add(CardFactory.CreateDoubleClaw());
         deck.Cards.Add(CardFactory.CreateDoubleThrust());
         deck.Cards.Add(CardFactory.CreatePiercingStrike());
         deck.Cards.Add(CardFactory.CreateHeavyStrike());
-        deck.Cards.Add(CardFactory.CreateRampage());
+        deck.Cards.Add(CardFactory.CreateStab());
         deck.Cards.Add(CardFactory.CreateAttackAmplifier());
         deck.Cards.Add(CardFactory.CreateDefensiveStance());
         deck.Cards.Add(CardFactory.CreateGuardianRedPanda());
+        deck.Cards.Add(CardFactory.CreatePiercingStrike());
+        deck.Cards.Add(CardFactory.CreateGuardBreak());
 
         return deck;
     }
@@ -79,7 +83,7 @@ public static class StarterDeckFactory
         mysticSpike.Priority = 3;
 
         Card pounce =
-            CardFactory.CreatePounce();
+            CardFactory.CreateFireball();
         pounce.Priority = 2;
 
         Card chainLightning =
@@ -94,6 +98,12 @@ public static class StarterDeckFactory
             CardFactory.CreateDiscountCoupon();
         discountCoupon.Priority = 1;
 
+        Card slash = CardFactory.CreateStab();
+        slash.Priority = 2;
+
+        Card doubleClaw = CardFactory.CreateDoubleClaw();
+        doubleClaw.Priority = 2;
+
         deck.Cards.Add(sorcerer);
         deck.Cards.Add(wanderer);
         deck.Cards.Add(fireball);
@@ -104,6 +114,8 @@ public static class StarterDeckFactory
         deck.Cards.Add(chainLightning);
         deck.Cards.Add(shieldBooster);
         deck.Cards.Add(discountCoupon);
+        deck.Cards.Add(slash);
+        deck.Cards.Add(doubleClaw);
 
         return deck;
     }
@@ -119,13 +131,15 @@ public static class StarterDeckFactory
         deck.Cards.Add(CardFactory.CreateNomadRedPanda());
         deck.Cards.Add(CardFactory.CreateGuardianRedPanda());
         deck.Cards.Add(CardFactory.CreateFireball());
-        deck.Cards.Add(CardFactory.CreateSlash());
-        deck.Cards.Add(CardFactory.CreatePounce());
+        deck.Cards.Add(CardFactory.CreateStab());
+        deck.Cards.Add(CardFactory.CreateFireball());
         deck.Cards.Add(CardFactory.CreateIceShards());
         deck.Cards.Add(CardFactory.CreateChainLightning());
-        deck.Cards.Add(CardFactory.CreateDoubleClaw());
+        deck.Cards.Add(CardFactory.CreateManaBurst());
         deck.Cards.Add(CardFactory.CreateShieldBooster());
-        deck.Cards.Add(CardFactory.CreateFortify());
+        deck.Cards.Add(CardFactory.CreateShieldBreaker() );
+        deck.Cards.Add(CardFactory.CreateManaPulses());
+        deck.Cards.Add(CardFactory.CreateChainLightning());
 
         return deck;
     }
@@ -140,14 +154,16 @@ public static class StarterDeckFactory
 
         deck.Cards.Add(CardFactory.CreateWandererRedPanda());
         deck.Cards.Add(CardFactory.CreateNomadRedPanda());
-        deck.Cards.Add(CardFactory.CreateRampage());
         deck.Cards.Add(CardFactory.CreateFireball());
-        deck.Cards.Add(CardFactory.CreateManaBurst());
+        deck.Cards.Add(CardFactory.CreateFireball());
+        deck.Cards.Add(CardFactory.CreateManaPulses());
         deck.Cards.Add(CardFactory.CreateGuardBreak());
-        deck.Cards.Add(CardFactory.CreateFrostNova());
-        deck.Cards.Add(CardFactory.CreateMysticSpike());
+        deck.Cards.Add(CardFactory.CreateArcaneBullets());
+        deck.Cards.Add(CardFactory.CreateManaPulses());
         deck.Cards.Add(CardFactory.CreateDiscountCoupon());
         deck.Cards.Add(CardFactory.CreateDiscardForEnergy());
+        deck.Cards.Add(CardFactory.CreateStab());
+        deck.Cards.Add(CardFactory.CreateDoubleThrust());
 
         return deck;
     }

@@ -11,7 +11,7 @@ public static class UtilityInfo
                 "Restore 3 Energy, up to your maximum Energy.",
 
             "Energy Drain" =>
-                "Drain 2 Energy from the opponent and restore 2 of your Energy. The opponent cannot be reduced below 1 Energy by this effect.",
+                "Drain 3 Energy from the opponent and restore 3 of your Energy.",
 
             "Attack Amplifier" =>
                 "Your Attacks gain +1 Damage.",
@@ -20,16 +20,16 @@ public static class UtilityInfo
                 "Deflect the next incoming hit.",
 
             "Shield Booster" =>
-                "Gain 2 Shield.",
+                "Gain 3 Shield.",
 
-            "Fortify" =>
-                "Gain 1 Shield for each Attack currently deployed.",
+           "Shield Breaker" =>
+                "Remove 3 Shield from the opponent.",
 
             "Discount Coupon" =>
-                "Your next card placement costs 1 less Energy.",
+                "All Energy costs are reduced by 1 for the rest of the turn.",
 
             "Discard For Energy" =>
-                "Restore 2 Energy.",
+                "Uses this card to select a card to discard , get the cards energy cost as a refund",
 
             _ =>
                 "No effect description available."

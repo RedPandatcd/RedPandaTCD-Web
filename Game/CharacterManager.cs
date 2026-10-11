@@ -122,12 +122,15 @@ public static class CharacterManager
             return false;
 
         bool usedAbility = false;
+        int DiscountedCost(int baseCost) =>
+            player.GetEnergyCost(baseCost);
+
         switch (player.ActiveCharacter.ActiveAbility)
         {
             case "ShieldGain":
-                if (player.Energy >= 2)
+                if (player.Energy >= DiscountedCost(2))
                 {
-                    player.Energy -= 2;
+                    player.Energy -= DiscountedCost(2);
                     player.Shield++;
 
                     BattleLog.Write(
@@ -144,9 +147,9 @@ public static class CharacterManager
                 break;
 
             case "MagicBoost":
-                if (player.Energy >= 1)
+                if (player.Energy >= DiscountedCost(1))
                 {
-                    player.Energy--;
+                    player.Energy -= DiscountedCost(1);
                     player.TemporaryAttackBonus++;
 
                     BattleLog.Write(
@@ -162,9 +165,9 @@ public static class CharacterManager
                 break;
 
             case "FieldShield":
-                if (player.Energy >= 3)
+                if (player.Energy >= DiscountedCost(3))
                 {
-                    player.Energy -= 3;
+                    player.Energy -= DiscountedCost(3);
 
                     int attacks =
                         (player.AttackSlot1 != null ? 1 : 0) +
@@ -186,9 +189,9 @@ public static class CharacterManager
                 break;
 
             case "PowerSurge":
-                if (player.Energy >= 3)
+                if (player.Energy >= DiscountedCost(3))
                 {
-                    player.Energy -= 3;
+                    player.Energy -= DiscountedCost(3);
                     player.TemporaryAttackBonus += 2;
 
                     BattleLog.Write(
@@ -204,9 +207,9 @@ public static class CharacterManager
                 break;
 
             case "AttackBoost":
-                if (player.Energy >= 2)
+                if (player.Energy >= DiscountedCost(2))
                 {
-                    player.Energy -= 2;
+                    player.Energy -= DiscountedCost(2);
                     player.TemporaryAttackBonus++;
 
                     BattleLog.Write(
@@ -222,9 +225,9 @@ public static class CharacterManager
                 break;
 
             case "Heal":
-                if (player.Energy >= 2)
+                if (player.Energy >= DiscountedCost(2))
                 {
-                    player.Energy -= 2;
+                    player.Energy -= DiscountedCost(2);
 
                     int healedTo =
                         Math.Min(

@@ -45,7 +45,10 @@ public static class UtilityManager
             return false;
         }
 
-        if (player.Energy < card.Cost)
+        int utilityCost =
+            player.GetEnergyCost(card.Cost);
+
+        if (player.Energy < utilityCost)
         {
             return false;
         }
@@ -57,7 +60,7 @@ public static class UtilityManager
         }
 
         player.Energy -=
-            card.Cost;
+            utilityCost;
 
         handSlot.CardInSlot = null;
 
@@ -115,12 +118,12 @@ public static class UtilityManager
                     opponent.Energy =
                         Math.Max(
                             1,
-                            opponent.Energy - 2);
+                            opponent.Energy - 3);
 
                     player.Energy =
                         Math.Min(
                             player.MaxEnergy,
-                            player.Energy + 2);
+                            player.Energy + 3);
 
                     BattleLog.WriteReplay(
                         $"{player.Name} used Energy Drain " +
@@ -218,30 +221,29 @@ public static class UtilityManager
             // FORTIFY
             // ==================================================
 
-            case "Fortify":
-            {
-                int attacks =
-                    (player.AttackSlot1 != null ? 1 : 0) +
-                    (player.AttackSlot2 != null ? 1 : 0);
+            case "Shield Breaker":
+                {
+                    int removedShield = Math.Min(
+                        3,
+                        Math.Max(0, opponent.Shield));
 
-                player.Shield +=
-                    attacks;
+                    opponent.Shield -= removedShield;
 
-                BattleLog.WriteReplay(
-                    $"{player.Name} used Fortify " +
-                    $"(+{attacks} Shield, {player.Shield} Total)",
-                    BattleLog.CurrentTurnNumber,
-                    BattleLog.CurrentPlayerIndex,
-                    BattleLogEventType.Utility,
-                    card.Name,
-                    card.Type,
-                    player.Deck.Structure,
-                    slotNumber: slotNumber,
-                    amount: attacks,
-                    playerShield: player.Shield);
+                    BattleLog.WriteReplay(
+                        $"{player.Name} used Shield Breaker " +
+                        $"(-{removedShield} Shield, {opponent.Shield} Remaining)",
+                        BattleLog.CurrentTurnNumber,
+                        BattleLog.CurrentPlayerIndex,
+                        BattleLogEventType.Utility,
+                        card.Name,
+                        card.Type,
+                        player.Deck.Structure,
+                        slotNumber: slotNumber,
+                        amount: removedShield,
+                        playerShield: player.Shield);
 
-                break;
-            }
+                    break;
+                }
 
             // ==================================================
             // DISCOUNT COUPON
@@ -253,7 +255,7 @@ public static class UtilityManager
 
                 BattleLog.WriteReplay(
                     $"{player.Name} used Discount Coupon " +
-                    $"(Next Card Costs 1 Less)",
+                    $"(All Energy Costs Reduced by 1 This Turn)",
                     BattleLog.CurrentTurnNumber,
                     BattleLog.CurrentPlayerIndex,
                     BattleLogEventType.Utility,
@@ -601,7 +603,8 @@ public static class UtilityManager
             return false;
         }
 
-        int moveCost = 1;
+        int moveCost =
+            player.GetEnergyCost(1);
 
         if (player.Energy < moveCost)
         {

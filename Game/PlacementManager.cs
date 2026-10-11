@@ -40,25 +40,11 @@ public static class PlacementManager
             handSlot.CardInSlot;
 
         int cost =
-            card.Cost;
-
-        if (player.DiscountActive)
-        {
-            cost =
-                Math.Max(
-                    0,
-                    cost - 1);
-        }
+            player.GetEnergyCost(card.Cost);
 
         if (player.Energy < cost)
         {
             return false;
-        }
-
-        if (player.DiscountActive)
-        {
-            player.DiscountActive =
-                false;
         }
 
         player.Energy -=
@@ -185,6 +171,8 @@ public static class PlacementManager
         {
             cost = card.Cost;
         }
+
+        cost = player.GetEnergyCost(cost);
 
         if (player.Energy < cost)
         {
@@ -589,15 +577,7 @@ public static class PlacementManager
             }
 
             int deployCost =
-                card.Cost;
-
-            if (player.DiscountActive)
-            {
-                deployCost =
-                    Math.Max(
-                        0,
-                        deployCost - 1);
-            }
+                player.GetEnergyCost(card.Cost);
 
             if (deployCost >
                 player.Energy)
