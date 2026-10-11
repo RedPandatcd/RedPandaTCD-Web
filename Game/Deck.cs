@@ -1,4 +1,5 @@
 namespace RedPandaTCD_Web.Game;
+
 using System.Text.Json.Serialization;
 
 public class Deck
@@ -15,11 +16,6 @@ public class Deck
 
     [JsonIgnore]
     public IDeckStorage? RuntimeStorage
-        {
-    get;
-    private set;
-        }
-    public IDeckStorage? RuntimeStorage
     {
         get;
         private set;
@@ -27,31 +23,26 @@ public class Deck
 
     public void InitializeRuntimeStorage()
     {
-        switch(Structure)
+        switch (Structure)
         {
             case DeckStructure.Queue:
-                RuntimeStorage =
-                    new QueueDeckStorage();
+                RuntimeStorage = new QueueDeckStorage();
                 break;
 
             case DeckStructure.Stack:
-                RuntimeStorage =
-                    new StackDeckStorage();
+                RuntimeStorage = new StackDeckStorage();
                 break;
 
             case DeckStructure.PriorityQueue:
-                RuntimeStorage =
-                    new PriorityQueueDeckStorage();
+                RuntimeStorage = new PriorityQueueDeckStorage();
                 break;
 
             case DeckStructure.RandomList:
-                RuntimeStorage =
-                    new RandomListDeckStorage();
+                RuntimeStorage = new RandomListDeckStorage();
                 break;
 
             case DeckStructure.LinkedList:
-                RuntimeStorage =
-                    new LinkedListDeckStorage();
+                RuntimeStorage = new LinkedListDeckStorage();
                 break;
 
             default:
@@ -59,15 +50,16 @@ public class Deck
                     "Unknown deck structure.");
         }
 
-        foreach(Card card in Cards)
+        foreach (Card card in Cards)
         {
             RuntimeStorage.Add(card);
         }
     }
+
     /// <summary>
-    /// Installs the exact recorded deck order for a replay viewer. Replay state
-    /// is observational only, so it uses a passive list-backed storage rather
-    /// than invoking live deck draw/randomization behavior.
+    /// Installs the exact recorded deck order for a replay viewer.
+    /// Replay state is observational only, so it uses a passive
+    /// list-backed storage rather than live deck behavior.
     /// </summary>
     public void SetReplayRuntimeCards(IEnumerable<Card> cards)
     {
@@ -80,7 +72,9 @@ public class Deck
 
         public ReplaySnapshotDeckStorage(IEnumerable<Card> cards)
         {
-            this.cards = cards.Select(card => card.Clone()).ToList();
+            this.cards = cards
+                .Select(card => card.Clone())
+                .ToList();
         }
 
         public int Count => cards.Count;
@@ -101,7 +95,11 @@ public class Deck
                 cards.Add(card);
         }
 
-        public List<Card> GetCards() => cards.Select(card => card.Clone()).ToList();
+        public List<Card> GetCards()
+        {
+            return cards
+                .Select(card => card.Clone())
+                .ToList();
+        }
     }
-
 }

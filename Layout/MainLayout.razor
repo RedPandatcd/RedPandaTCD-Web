@@ -25,34 +25,27 @@
     width: 100%;
 }
 </style>
+
 @code {
+    
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-await JS.InvokeVoidAsync("gameGuard.enable");
-        }
+        if (!firstRender)
+            return;
+
+        await JS.InvokeVoidAsync("gameGuard.enable");
+
+        var json = await JS.InvokeAsync<string?>(
+            "deckStorage.load");
+
+        DeckManager.ImportCustomDecks(json);
+
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
     {
         await JS.InvokeVoidAsync("gameGuard.disable");
     }
-private bool decksLoaded;
-
-protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-    if (!firstRender || decksLoaded)
-        return;
-
-    decksLoaded = true;
-
-    var json = await JS.InvokeAsync<string?>(
-        "deckStorage.load");
-
-    DeckManager.ImportCustomDecks(json);
-
-    StateHasChanged();
-}
 }

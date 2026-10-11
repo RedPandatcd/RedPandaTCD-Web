@@ -154,17 +154,34 @@ public static void DeleteTutorialDeck()
 }
 private const int StarterDeckCount = 5;
 
+
 public static string ExportCustomDecks()
 {
     InitializeDefaultDecks();
 
-    return JsonSerializer.Serialize(
-        Decks.Skip(StarterDeckCount).ToList());
+    var starterDecks = new[]
+    {
+        StarterDeckFactory.CreateQueueStarter(),
+        StarterDeckFactory.CreateStackStarter(),
+        StarterDeckFactory.CreatePriorityStarter(),
+        StarterDeckFactory.CreateRandomStarter(),
+        StarterDeckFactory.CreateLinkedStarter()
+    };
+
+    var customDecks = Decks
+        .Where(deck => !starterDecks.Any(starter =>
+            deck.Name == starter.Name &&
+            deck.Structure == starter.Structure))
+        .ToList();
+
+    return JsonSerializer.Serialize(customDecks);
 }
 
 public static void ImportCustomDecks(string? json)
 {
     Decks.Clear();
+
+    // Always restore all five starter decks first.
     InitializeDefaultDecks();
 
     if (string.IsNullOrWhiteSpace(json))
@@ -178,15 +195,27 @@ public static void ImportCustomDecks(string? json)
         if (savedDecks == null)
             return;
 
+        var starterDecks = Decks.ToList();
+
         foreach (Deck deck in savedDecks)
         {
-            if (deck != null)
-                Decks.Add(DeckCloner.Clone(deck));
+            if (deck == null)
+                continue;
+
+            // Never import a saved copy of a starter deck.
+            bool isStarter = starterDecks.Any(starter =>
+                deck.Name == starter.Name &&
+                deck.Structure == starter.Structure);
+
+            if (isStarter)
+                continue;
+
+            Decks.Add(DeckCloner.Clone(deck));
         }
     }
     catch (JsonException)
     {
-        // Keep the starter decks if saved data is invalid.
+        // Invalid saved data leaves the starter decks available.
     }
 }
 }
