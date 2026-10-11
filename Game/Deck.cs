@@ -1,4 +1,5 @@
 namespace RedPandaTCD_Web.Game;
+using System.Text.Json.Serialization;
 
 public class Deck
 {
@@ -12,7 +13,12 @@ public class Deck
     public List<Card> Cards { get; set; } =
         new List<Card>();
 
-    // Actual data structure used during a match.
+    [JsonIgnore]
+    public IDeckStorage? RuntimeStorage
+        {
+    get;
+    private set;
+        }
     public IDeckStorage? RuntimeStorage
     {
         get;

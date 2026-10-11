@@ -1,4 +1,5 @@
 namespace RedPandaTCD_Web.Game;
+using System.Text.Json;
 
 public static class DeckManager
 {
@@ -46,6 +47,8 @@ public static class DeckManager
     string name,
     out string errorMessage)
 {
+   InitializeDefaultDecks();
+
     if (string.IsNullOrWhiteSpace(name))
     {
         errorMessage =
@@ -147,6 +150,43 @@ public static void DeleteTutorialDeck()
         {
             Decks.RemoveAt(i);
         }
+    }
+}
+private const int StarterDeckCount = 5;
+
+public static string ExportCustomDecks()
+{
+    InitializeDefaultDecks();
+
+    return JsonSerializer.Serialize(
+        Decks.Skip(StarterDeckCount).ToList());
+}
+
+public static void ImportCustomDecks(string? json)
+{
+    Decks.Clear();
+    InitializeDefaultDecks();
+
+    if (string.IsNullOrWhiteSpace(json))
+        return;
+
+    try
+    {
+        var savedDecks =
+            JsonSerializer.Deserialize<List<Deck>>(json);
+
+        if (savedDecks == null)
+            return;
+
+        foreach (Deck deck in savedDecks)
+        {
+            if (deck != null)
+                Decks.Add(DeckCloner.Clone(deck));
+        }
+    }
+    catch (JsonException)
+    {
+        // Keep the starter decks if saved data is invalid.
     }
 }
 }

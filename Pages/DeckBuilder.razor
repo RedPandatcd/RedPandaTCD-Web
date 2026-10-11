@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Components
 @inject NavigationManager Navigation
 @inject GameSessionState Session
+@inject IJSRuntime JS
 
 <PageTitle>Deck Builder - Red Panda TCD</PageTitle>
 
@@ -872,7 +873,8 @@ else
         saveSucceeded = false;
     }
 
-private void SaveDeck()
+
+private async Task SaveDeck()
 {
     workingDeck.Structure = selectedStructure;
     workingDeck.Name = deckName.Trim();
@@ -903,6 +905,8 @@ private void SaveDeck()
             return;
         }
 
+        await PersistDecksAsync();
+
         saveMessage =
             "Deck updated successfully.";
 
@@ -926,6 +930,8 @@ private void SaveDeck()
     string savedName =
         deckName.Trim();
 
+    await PersistDecksAsync();
+
     ResetBuilder();
 
     saveSucceeded = true;
@@ -933,6 +939,7 @@ private void SaveDeck()
     saveMessage =
         $"{savedName} saved successfully.";
 }
+
 
     private void SaveLearnToPlayDeck()
     {
@@ -1048,6 +1055,11 @@ private void SaveDeck()
     private Task SetPageTutorialStep(int step) { pageTutorialStep = step; return Task.CompletedTask; }
     private void FinishPageTutorial() { Session.Tutorial.DeckBuilderCompleted = true; showPageTutorial = false; Navigation.NavigateTo("/tutorial"); }
     private void ExitPageTutorial() { showPageTutorial = false; Navigation.NavigateTo("/tutorial"); }
-
+    private async Task PersistDecksAsync()
+{
+    await JS.InvokeVoidAsync(
+        "deckStorage.save",
+        DeckManager.ExportCustomDecks());
+}
 
 }

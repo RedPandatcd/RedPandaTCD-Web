@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @inject IJSRuntime JS
 @implements IAsyncDisposable
+@using RedPandaTCD_Web.Game
+
 
 <div class="main-layout">
 
@@ -37,4 +39,20 @@ await JS.InvokeVoidAsync("gameGuard.enable");
     {
         await JS.InvokeVoidAsync("gameGuard.disable");
     }
+private bool decksLoaded;
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (!firstRender || decksLoaded)
+        return;
+
+    decksLoaded = true;
+
+    var json = await JS.InvokeAsync<string?>(
+        "deckStorage.load");
+
+    DeckManager.ImportCustomDecks(json);
+
+    StateHasChanged();
+}
 }
