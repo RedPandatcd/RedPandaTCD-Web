@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -28,20 +29,22 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script src="gameGuard.js"></script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script>
-    window.redPandaBattle = {
-        scrollLogToBottom: function (element) {
-            if (!element) {
-                return;
-            }
 
-            element.scrollTop =
-                element.scrollHeight;
-        }
-    };
-</script>
+    <script src="gameGuard.js"></script>
+    <script src="deckStorage.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+
+    <script>
+        window.redPandaBattle = {
+            scrollLogToBottom: function (element) {
+                if (!element) {
+                    return;
+                }
+
+                element.scrollTop = element.scrollHeight;
+            }
+        };
+    </script>
 </body>
 
 </html>

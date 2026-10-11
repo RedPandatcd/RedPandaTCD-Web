@@ -13,7 +13,7 @@ public static class DeckBuilder
     // Everything is read from the Card fields, so new
     // attacks are valued automatically.
 
-    public const decimal BudgetPerAttack = 5.2m;
+    public const decimal BudgetPerAttack = 5.3m;
     public const decimal MultiHitValue = 1.5m;
     public const decimal PiercingValue = 1.2m;
     public const decimal IgnoreShieldValue = 2.0m;
