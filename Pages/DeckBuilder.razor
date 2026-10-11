@@ -1027,9 +1027,13 @@ private async Task SaveDeck()
         Navigation.NavigateTo("/battle");
     }
 
-    private void ExitLearnToPlayBuilder()
+    private async Task ExitLearnToPlayBuilder()
 {
     DeckManager.DeleteTutorialDeck();
+
+    await JS.InvokeVoidAsync(
+        "deckStorage.save",
+        DeckManager.ExportCustomDecks());
 
     Session.Tutorial.TutorialDeck = null;
 

@@ -15,6 +15,7 @@ public enum TutorialAction
     DeployAttack,
     ReplaceAttack,
     RestAttack,
+    BeginCharacterReplacement,
     ReplaceCharacter,
     ResolveWandererEntry,
     ObserveAutomaticPlacement,
@@ -709,7 +710,7 @@ private static readonly IReadOnlyList<TutorialStep>
                 "You can replace your Character during Placement. Select your current " +
                 "Character slot to begin.",
             RequiredAction =
-                TutorialAction.ReplaceCharacter,
+                TutorialAction.BeginCharacterReplacement,
             HighlightTarget =
                 "player-character",
             RestrictInput =
@@ -720,9 +721,9 @@ private static readonly IReadOnlyList<TutorialStep>
             Number = 44,
             Title = "Deploy Wanderer Red Panda",
             Message =
-                "Deploy Wanderer Red Panda into your Character slot.",
+                "Deploy Wanderer Red Panda into your Character slot, replacing Sorcerer.",
             RequiredAction =
-                TutorialAction.DeployCharacter,
+                TutorialAction.ReplaceCharacter,
             HighlightTarget =
                 "wanderer",
             RestrictInput =

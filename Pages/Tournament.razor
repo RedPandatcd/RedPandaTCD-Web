@@ -1968,63 +1968,58 @@ private void BeginTournament()
 
 
     private void StartCurrentRound()
+{
+    if (isStartingMatch)
     {
-        if (isStartingMatch)
-        {
-            return;
-        }
-
-        if (!Session.Tournament.IsActive ||
-            Session.Tournament.LockedPlayerDeck == null)
-        {
-            errorMessage =
-                "No active Tournament run is ready.";
-
-            return;
-        }
-
-        if (!Session.HasPlayerName)
-        {
-            errorMessage =
-                "A player name is required before starting the Tournament.";
-
-            return;
-        }
-
-        isStartingMatch = true;
-
-        errorMessage = "";
-
-        try
-        {
-            Session.CurrentMatch =
-                GameSetupManager.StartTournamentMatch(
-                    BotManager.Difficulty = BotDifficulty.Medium;
-                    Session.PlayerName,
-                    Session.Tournament);
-
-            Navigation.NavigateTo(
-                "/battle");
-        }
-        catch (Exception exception)
-        {
-            Session.CurrentMatch =
-                null;
-
-            errorMessage =
-                exception.Message;
-
-            Console.Error.WriteLine(
-                "TOURNAMENT MATCH FAILED:");
-
-            Console.Error.WriteLine(
-                exception.ToString());
-        }
-        finally
-        {
-            isStartingMatch = false;
-        }
+        return;
     }
+
+    if (!Session.Tournament.IsActive ||
+        Session.Tournament.LockedPlayerDeck == null)
+    {
+        errorMessage =
+            "No active Tournament run is ready.";
+        return;
+    }
+
+    if (!Session.HasPlayerName)
+    {
+        errorMessage =
+            "A player name is required before starting the Tournament.";
+        return;
+    }
+
+    isStartingMatch = true;
+    errorMessage = "";
+
+    try
+    {
+        // Tournament opponents always use Medium difficulty.
+        BotManager.IsTutorialMode = false;
+        BotManager.Difficulty = BotDifficulty.Medium;
+
+        Session.CurrentMatch =
+            GameSetupManager.StartTournamentMatch(
+                Session.PlayerName,
+                Session.Tournament);
+
+        Navigation.NavigateTo("/battle");
+    }
+    catch (Exception exception)
+    {
+        Session.CurrentMatch = null;
+        errorMessage = exception.Message;
+
+        Console.Error.WriteLine(
+            "TOURNAMENT MATCH FAILED:");
+
+        Console.Error.WriteLine(exception.ToString());
+    }
+    finally
+    {
+        isStartingMatch = false;
+    }
+}
 
 
     private void AskAbandonTournament()

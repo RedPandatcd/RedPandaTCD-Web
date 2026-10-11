@@ -3876,6 +3876,7 @@ else
     // 1. STATE / UI FIELDS
 
     private bool logCollapsed, botIsActing, coinFlipAcknowledged, showLeaveMatchDialog;
+    private bool endPhaseResolutionInProgress;
     private bool logCopied, replayCopied;
     private bool showCoinFlipDialog = true;
     private bool showPassDeviceDialog, allowNavigation, showZeroEnergyDialog;
@@ -4319,12 +4320,17 @@ private void RefreshReplayDisplay()
         StateHasChanged();
     }
 
-   private void FinishCurrentTutorial()
+   private async Task FinishCurrentTutorial()
 {
     if (!IsGuidedTutorialBattle)
         return;
 
     DeckManager.DeleteTutorialDeck();
+
+    // Save the updated deck list to browser storage.
+    await JS.InvokeVoidAsync(
+        "deckStorage.save",
+        DeckManager.ExportCustomDecks());
 
     Session.Tutorial.TutorialDeck = null;
 
@@ -4412,9 +4418,17 @@ private void RefreshReplayDisplay()
         if (!IsLearnToPlayBattle)
             return true;
 
-        return (RequiredTutorialAction is
-                    TutorialAction.DeployCharacter or
-                    TutorialAction.ReplaceCharacter) &&
+        Player player = GetPresentedPlayer();
+
+        // Do not let a replacement satisfy (or bypass) the tutorial's
+        // initial-deployment step. The required action must match the
+        // actual operation this placement would perform.
+        TutorialAction expectedAction =
+            player.ActiveCharacter == null
+                ? TutorialAction.DeployCharacter
+                : TutorialAction.ReplaceCharacter;
+
+        return RequiredTutorialAction == expectedAction &&
                TutorialAllowsCard(card);
     }
 
@@ -4491,7 +4505,13 @@ private void RefreshReplayDisplay()
 
         CloseGameplayPopups();
 
-        await CompleteCurrentPlayerPhaseWithEndAnimation(match);
+        if (!await CompleteCurrentPlayerPhaseWithEndAnimation(match))
+        {
+            // Another event already owns this End Phase transition.
+            // Do not continue this duplicate phase-flow invocation.
+            return;
+        }
+
         Console.WriteLine(
     $"BOT TRANSITION: Turn={match.TurnNumber}, " +
     $"Phase={match.CurrentPhase}, " +
@@ -4560,36 +4580,68 @@ private void RefreshReplayDisplay()
         StateHasChanged();
     }
 
-    private async Task CompleteCurrentPlayerPhaseWithEndAnimation(MatchState match)
+    private async Task<bool> CompleteCurrentPlayerPhaseWithEndAnimation(MatchState match)
     {
         if (match.CurrentPhase == MatchPhase.End)
         {
-            Player acting = match.GetActingPlayer();
-            BattleLog.SetReplayContext(
-                match.TurnNumber,
-                match.ActingPlayerIndex,
-                acting.Deck.Structure,
-                match.Player1,
-                match.Player2,
-                match);
+            // ResolveAnimated contains awaits, so Blazor can re-enter this flow
+            // before the first End Phase has finished. Only one invocation may
+            // resolve and advance an End Phase at a time.
+            if (endPhaseResolutionInProgress)
+            {
+                Console.WriteLine(
+                    "END PHASE TRANSITION BLOCKED: resolution already in progress.");
+                return false;
+            }
 
-            await EndPhaseManager.ResolveAnimated(
-                acting,
-                match.TurnNumber,
-                match.ActingPlayerIndex,
-                async () =>
+            endPhaseResolutionInProgress = true;
+            try
+            {
+                Player acting = match.GetActingPlayer();
+                int turnBeingResolved = match.TurnNumber;
+                int actingIndexBeingResolved = match.ActingPlayerIndex;
+
+                BattleLog.SetReplayContext(
+                    turnBeingResolved,
+                    actingIndexBeingResolved,
+                    acting.Deck.Structure,
+                    match.Player1,
+                    match.Player2,
+                    match);
+
+                await EndPhaseManager.ResolveAnimated(
+                    acting,
+                    turnBeingResolved,
+                    actingIndexBeingResolved,
+                    async () =>
+                    {
+                        await InvokeAsync(StateHasChanged);
+                    });
+
+                // Do not advance a different phase/player if state changed while
+                // the animation was awaiting UI updates.
+                if (match.CurrentPhase != MatchPhase.End ||
+                    match.TurnNumber != turnBeingResolved ||
+                    match.ActingPlayerIndex != actingIndexBeingResolved ||
+                    match.GetActingPlayer() != acting)
                 {
-                    await InvokeAsync(StateHasChanged);
-                });
+                    Console.WriteLine(
+                        "END PHASE ADVANCE CANCELLED: match state changed during resolution.");
+                    return false;
+                }
 
-            // Effects were already resolved in stages; advance the phase without
-            // invoking the synchronous EndPhase resolver a second time.
-            PhaseManager.CompleteCurrentPlayerPhaseAfterResolvedEnd(
-                match);
-            return;
+                // Effects were resolved above; advance without resolving them again.
+                PhaseManager.CompleteCurrentPlayerPhaseAfterResolvedEnd(match);
+                return true;
+            }
+            finally
+            {
+                endPhaseResolutionInProgress = false;
+            }
         }
 
         PhaseManager.CompleteCurrentPlayerPhase(match);
+        return true;
     }
 
     private async Task ResolveAutomaticEndPhase(
@@ -4611,7 +4663,10 @@ private void RefreshReplayDisplay()
             TutorialAction tutorialActionBeforeEnd =
                 RequiredTutorialAction;
 
-            await CompleteCurrentPlayerPhaseWithEndAnimation(match);
+            if (!await CompleteCurrentPlayerPhaseWithEndAnimation(match))
+            {
+                return;
+            }
             
             if (IsGuidedTutorialBattle &&
                 tutorialActionBeforeEnd ==
@@ -4750,8 +4805,11 @@ private void RefreshReplayDisplay()
                 return;
             }
 
-            await CompleteCurrentPlayerPhaseWithEndAnimation(
-                match);
+            if (!await CompleteCurrentPlayerPhaseWithEndAnimation(
+                    match))
+            {
+                return;
+            }
 
             transitionCount++;
             Console.WriteLine(
@@ -4777,8 +4835,11 @@ private void RefreshReplayDisplay()
                     $"{bot.Name} from a stalled " +
                     $"{phaseBefore} phase.");
 
-                await CompleteCurrentPlayerPhaseWithEndAnimation(
-                match);
+                if (!await CompleteCurrentPlayerPhaseWithEndAnimation(
+                        match))
+                {
+                    return;
+                }
             }
 
             if (IsDsaTutorialBattle &&
@@ -5079,7 +5140,7 @@ UpdateReplayContext();
                 !IsLearnToPlayBattle ||
                 string.Equals(
                     slot.CardInSlot.Id,
-                    "AN1",
+                    "AP7",
                     StringComparison.OrdinalIgnoreCase),
 
             _ =>
@@ -5146,7 +5207,7 @@ UpdateReplayContext();
                 TutorialAction.DiscardAndDraw &&
             !string.Equals(
                 selectedHandSlot.CardInSlot.Id,
-                "AN1",
+                "AP7",
                 StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -5990,9 +6051,18 @@ UpdateReplayContext();
         if (!IsGuidedTutorialBattle)
             return true;
 
-        return RequiredTutorialAction is
-            TutorialAction.DeployCharacter or
-            TutorialAction.ReplaceCharacter;
+        // The Learn to Play lesson separates beginning a replacement
+        // from completing it, so choosing Wanderer cannot consume the
+        // preceding tutorial step.
+        TutorialAction expectedAction =
+            player.ActiveCharacter == null
+                ? TutorialAction.DeployCharacter
+                : RequiredTutorialAction ==
+                    TutorialAction.BeginCharacterReplacement
+                    ? TutorialAction.BeginCharacterReplacement
+                    : TutorialAction.ReplaceCharacter;
+
+        return RequiredTutorialAction == expectedAction;
     }
 
     private void SelectPlacementCharacter()
@@ -6017,6 +6087,15 @@ UpdateReplayContext();
             return;
 
         showCharacterPicker = true;
+
+        if (IsLearnToPlayBattle &&
+            player.ActiveCharacter != null &&
+            RequiredTutorialAction ==
+                TutorialAction.BeginCharacterReplacement)
+        {
+            NotifyTutorialAction(
+                TutorialAction.BeginCharacterReplacement);
+        }
 
         StateHasChanged();
     }
@@ -6097,13 +6176,18 @@ UpdateReplayContext();
 
         if (!success)
             return;
-
         showCharacterPicker = false;
 
-        NotifyTutorialAction(
-            isReplacement
-                ? TutorialAction.ReplaceCharacter
-                : TutorialAction.DeployCharacter);
+        if (isReplacement)
+        {
+            NotifyTutorialAction(
+                TutorialAction.ReplaceCharacter);
+        }
+        else
+        {
+            NotifyTutorialAction(
+                TutorialAction.DeployCharacter);
+}
 
         if (player.ActiveCharacter?.Name ==
                 "Wanderer Red Panda" &&
@@ -6581,7 +6665,7 @@ UpdateReplayContext();
         showLeaveMatchDialog = true;
     }
 
-    private void ConfirmLeaveMatch()
+    private async Task ConfirmLeaveMatch()
     {
         if (Session.CurrentMatch == null ||
             IsBattleFinished)
@@ -6653,15 +6737,19 @@ UpdateReplayContext();
         if (!string.IsNullOrWhiteSpace(
                 destination))
         {
-            if (IsGuidedTutorialBattle)
-{
-    DeckManager.DeleteTutorialDeck();
+          if (IsGuidedTutorialBattle)
+        {
+            DeckManager.DeleteTutorialDeck();
 
-    Session.Tutorial.TutorialDeck = null;
+            await JS.InvokeVoidAsync(
+                "deckStorage.save",
+                DeckManager.ExportCustomDecks());
 
-    TutorialManager.ExitTutorial(
-        Session.Tutorial);
-}
+            Session.Tutorial.TutorialDeck = null;
+
+            TutorialManager.ExitTutorial(
+                Session.Tutorial);
+        }
 
             Session.CurrentMatch = null;
             allowNavigation = true;
@@ -7564,6 +7652,7 @@ private bool HasLegalPlacementAction(
         if (IsGuidedTutorialBattle &&
             RequiredTutorialAction is not
                 (TutorialAction.DeployCharacter or
+                 TutorialAction.BeginCharacterReplacement or
                  TutorialAction.ReplaceCharacter))
         {
             return "";
@@ -7695,7 +7784,7 @@ private bool HasLegalPlacementAction(
         {
             return string.Equals(
                 slot.CardInSlot.Id,
-                "AN1",
+                "AP7",
                 StringComparison.OrdinalIgnoreCase)
                 ? "tutorial-hand-card-target"
                 : "tutorial-hand-card-disabled";
