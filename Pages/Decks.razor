@@ -1700,15 +1700,12 @@
     }
 
 
-    private void ConfirmDelete()
+   private async Task ConfirmDelete()
     {
         if (deleteDeckIndex == null)
-        {
             return;
-        }
 
-        int index =
-            deleteDeckIndex.Value;
+        int index = deleteDeckIndex.Value;
 
         if (IsStarterDeck(index))
         {
@@ -1716,14 +1713,17 @@
             return;
         }
 
-        DeckManager.DeleteDeck(
-            index);
+        bool deleted = DeckManager.DeleteDeck(index);
 
-        deleteDeckIndex =
-            null;
+        deleteDeckIndex = null;
+        viewedDeckIndex = null;
 
-        viewedDeckIndex =
-            null;
+        if (deleted)
+        {
+            await JS.InvokeVoidAsync(
+                "deckStorage.save",
+                DeckManager.ExportCustomDecks());
+        }
     }
 
 

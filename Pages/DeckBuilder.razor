@@ -1022,6 +1022,12 @@ private async Task SaveDeck()
     private void ProceedToTutorialBattle()
     {
         if (Session.Tutorial.TutorialDeck == null) { showTutorialDeckComplete = false; saveSucceeded = false; saveMessage = "The Tutorial deck could not be loaded."; return; }
+
+        // Completing the required deck-building step counts as completing
+        // the Deck Builder tutorial, even when the player continues straight
+        // into the Learn to Play battle.
+        Session.Tutorial.DeckBuilderCompleted = true;
+
         showTutorialDeckComplete = false;
         Session.CurrentMatch = GameSetupManager.StartLearnToPlayMatch(Session.PlayerName, Session.Tutorial.TutorialDeck);
         Navigation.NavigateTo("/battle");

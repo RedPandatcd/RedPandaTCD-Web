@@ -60,6 +60,9 @@ public static class BotManager
                 continue;
             }
 
+            if (!ShouldPlayUtility(player, opponent, utilityCard))
+                continue;
+
             if (UtilityManager.BotPlayUtility(
                     player,
                     opponent,
@@ -126,9 +129,7 @@ public static class BotManager
         Player defender)
     {
         if (EffectiveDifficulty != BotDifficulty.Easy &&
-            attacker.ActiveCharacter != null &&
-            !attacker.CharacterNewlyDeployed &&
-            !attacker.AbilityUsedThisPhase)
+            ShouldUseCharacterAbility(attacker, defender))
         {
             AttackManager.UseCharacterAbility(attacker);
         }
@@ -198,10 +199,14 @@ public static class BotManager
                 ? player.AttackSlot1TotalUses
                 : player.AttackSlot2TotalUses;
 
+        // Use the same discounted cost as AttackManager so the bot does not
+        // incorrectly skip attacks while Discount Coupon is active.
+        int effectiveCost = player.GetEnergyCost(cost);
+
         return !fatigued &&
                !resting &&
                !used &&
-               player.Energy >= cost;
+               player.Energy >= effectiveCost;
     }
 
     // Estimates the result of an attack against the current board.
@@ -224,8 +229,13 @@ public static class BotManager
                 ? attacker.AttackSlot1TotalUses
                 : attacker.AttackSlot2TotalUses;
 
-        // Avoid an attack that would spend all of the bot's energy.
-        if (attacker.Energy - useCost <= 0)
+        int effectiveCost = attacker.GetEnergyCost(useCost);
+
+        // Preserve a little energy when possible, but allow a finishing attack.
+        // The old check used the undiscounted cost and could reject legal attacks.
+        if (attacker.Energy - effectiveCost <= 0 &&
+            defender.ActiveCharacter != null &&
+            defender.CurrentCharacterHp > 0)
             return -10000;
 
         int damage =
@@ -393,10 +403,116 @@ public static class BotManager
 
         value += netShieldLoss * 0.65;
 
-        value -= useCost *
+        value -= effectiveCost *
                  (attacker.Energy <= 8 ? 2.0 : 0.8);
 
         return value;
+    }
+
+    // Avoid spending a utility action on an effect that has no meaningful
+    // target or benefit. Keep this conservative: UtilityManager remains the
+    // authority for whether the play is legal.
+    private static bool ShouldPlayUtility(
+        Player player,
+        Player opponent,
+        Card card)
+    {
+        switch (card.Name)
+        {
+            case "Energy Potion":
+                return player.Energy < player.MaxEnergy &&
+                       player.MaxEnergy - player.Energy >= 2;
+
+            case "Energy Drain":
+                return opponent.Energy > 1 &&
+                       player.Energy < player.MaxEnergy;
+
+            case "Attack Amplifier":
+                return player.AttackSlot1 != null ||
+                       player.AttackSlot2 != null;
+
+            case "Shield Breaker":
+                return opponent.Shield > 0;
+
+            case "Shield Booster":
+                return player.Shield <= 2;
+
+            case "Defensive Stance":
+                // Only prepare to deflect when the opponent has a deployed attack.
+                return opponent.AttackSlot1 != null ||
+                       opponent.AttackSlot2 != null;
+
+            case "Discount Coupon":
+                return HasAffordablePotentialDiscount(player);
+
+            default:
+                return true;
+        }
+    }
+
+    private static bool HasAffordablePotentialDiscount(Player player)
+    {
+        if (player.AttackSlot1 != null &&
+            !player.IsFatiguedSlot1 && !player.IsRestingSlot1 &&
+            !player.AttackSlot1UsedThisPhase &&
+            player.AttackSlot1TotalUses > 0)
+            return true;
+
+        if (player.AttackSlot2 != null &&
+            !player.IsFatiguedSlot2 && !player.IsRestingSlot2 &&
+            !player.AttackSlot2UsedThisPhase &&
+            player.AttackSlot2TotalUses > 0)
+            return true;
+
+        return player.Energy < player.MaxEnergy;
+    }
+
+    private static bool ShouldUseCharacterAbility(
+        Player player,
+        Player opponent)
+    {
+        if (player.ActiveCharacter == null ||
+            player.CharacterNewlyDeployed ||
+            player.AbilityUsedThisPhase ||
+            player.AbilityCooldownRemaining > 0)
+            return false;
+
+        string ability = player.ActiveCharacter.ActiveAbility;
+        int cost = ability switch
+        {
+            "ShieldGain" => player.GetEnergyCost(2),
+            "MagicBoost" => player.GetEnergyCost(1),
+            "FieldShield" => player.GetEnergyCost(3),
+            "PowerSurge" => player.GetEnergyCost(3),
+            "AttackBoost" => player.GetEnergyCost(2),
+            "Heal" => player.GetEnergyCost(2),
+            _ => int.MaxValue
+        };
+
+        if (player.Energy < cost)
+            return false;
+
+        switch (ability)
+        {
+            case "ShieldGain":
+                return player.Shield < 3 &&
+                       (opponent.AttackSlot1 != null || opponent.AttackSlot2 != null);
+
+            case "FieldShield":
+                return player.Shield < 4 &&
+                       (player.AttackSlot1 != null || player.AttackSlot2 != null);
+
+            case "Heal":
+                return player.CurrentCharacterHp < player.ActiveCharacter.HpValue;
+
+            case "MagicBoost":
+            case "PowerSurge":
+            case "AttackBoost":
+                return player.AttackSlot1 != null || player.AttackSlot2 != null;
+
+            default:
+                return false;
+        }
     }
 
     public static bool RunNextUtilityAction(
@@ -409,6 +525,10 @@ public static class BotManager
                 continue;
 
             if (slot.CardInSlot!.Type != CardType.Utility)
+                continue;
+
+            Card utilityCard = slot.CardInSlot;
+            if (!ShouldPlayUtility(player, opponent, utilityCard))
                 continue;
 
             // Keep Easy bots from using the advanced energy-conversion play.
@@ -531,9 +651,7 @@ public static class BotManager
         {
             case 0:
                 if (EffectiveDifficulty == BotDifficulty.Easy ||
-                    attacker.ActiveCharacter == null ||
-                    attacker.CharacterNewlyDeployed ||
-                    attacker.AbilityUsedThisPhase)
+                    !ShouldUseCharacterAbility(attacker, defender))
                 {
                     return false;
                 }
