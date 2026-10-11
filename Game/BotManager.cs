@@ -143,21 +143,36 @@ public static class BotManager
             if (MatchManager.IsMatchOver(attacker, defender))
                 return;
 
-            int first =
-                GetAttackValue(attacker, defender, 1) >=
-                GetAttackValue(attacker, defender, 2)
-                    ? 1
-                    : 2;
+            int chosen;
 
-            int second = first == 1 ? 2 : 1;
+            if (EffectiveDifficulty == BotDifficulty.Hard)
+            {
+                // Hard evaluates both legal attacks against the current board,
+                // so it can prioritize lethal damage, character knockouts,
+                // shield pressure, and energy efficiency.
+                double slot1Value = GetAttackValue(attacker, defender, 1);
+                double slot2Value = GetAttackValue(attacker, defender, 2);
 
-            int chosen =
-                CanUseAttack(attacker, first) ? first : second;
+                chosen = slot1Value >= slot2Value ? 1 : 2;
+                if (Math.Max(slot1Value, slot2Value) <= 0)
+                    return;
+            }
+            else
+            {
+                // Easy and Medium use a simpler predictable slot-order policy.
+                // Easy is additionally limited to one attack per phase above.
+                chosen = CanUseAttack(attacker, 1) ? 1 : 2;
+                if (!CanUseAttack(attacker, chosen) ||
+                    GetAttackValue(attacker, defender, chosen) <= 0)
+                {
+                    chosen = chosen == 1 ? 2 : 1;
+                    if (!CanUseAttack(attacker, chosen) ||
+                        GetAttackValue(attacker, defender, chosen) <= 0)
+                        return;
+                }
+            }
 
             if (!CanUseAttack(attacker, chosen))
-                return;
-
-            if (GetAttackValue(attacker, defender, chosen) <= 0)
                 return;
 
             AttackManager.BotUseAttack(
