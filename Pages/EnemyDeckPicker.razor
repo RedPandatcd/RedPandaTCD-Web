@@ -32,7 +32,22 @@
              Session.TrainingBotDeck != null)
         {
             <div class="match-summary">
+                <div class="bot-difficulty-picker">
+    <label for="bot-difficulty">
+        Training Bot Difficulty
+    </label>
 
+    <select id="bot-difficulty"
+            @bind="selectedDifficulty">
+        <option value="@BotDifficulty.Easy">Easy</option>
+        <option value="@BotDifficulty.Medium">Medium</option>
+        <option value="@BotDifficulty.Hard">Hard</option>
+    </select>
+
+    <small>
+        Choose how challenging your training match will be.
+    </small>
+</div>
                 <div class="summary-section">
 
                     <span class="summary-label">
@@ -502,10 +517,11 @@
         try
         {
             Session.CurrentMatch =
-                GameSetupManager.StartTrainingMatch(
-                    Session.PlayerName,
-                    Session.TrainingPlayerDeck,
-                    Session.TrainingBotDeck);
+            GameSetupManager.StartTrainingMatch(
+            Session.PlayerName,
+            Session.TrainingPlayerDeck,
+            Session.TrainingBotDeck,
+            selectedDifficulty);
 
             if (Session.CurrentMatch == null)
             {
@@ -569,4 +585,6 @@
                 structure.ToString()
         };
     }
+    private BotDifficulty selectedDifficulty =
+    BotDifficulty.Medium;
 }

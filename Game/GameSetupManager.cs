@@ -5,8 +5,12 @@ public static class GameSetupManager
     public static MatchState StartTrainingMatch(
         string playerName,
         Deck playerDeck,
-        Deck botDeck)
+        Deck botDeck,
+        BotDifficulty difficulty = BotDifficulty.Medium)
     {
+        BotManager.IsTutorialMode = false;
+        BotManager.Difficulty = difficulty;
+
         Player player = CreatePlayer(
             playerName,
             false,
@@ -23,53 +27,55 @@ public static class GameSetupManager
             GameMode.BotMatch);
     }
 
-public static MatchState StartLearnToPlayMatch(
-    string playerName,
-    Deck tutorialDeck)
-{
-    Deck orderedPlayerDeck =
-        CreateOrderedLearnToPlayDeck(
-            tutorialDeck);
+    public static MatchState StartLearnToPlayMatch(
+        string playerName,
+        Deck tutorialDeck)
+    {
+        BotManager.IsTutorialMode = true;
 
-    Deck weakBotDeck =
-        CreateWeakLearnToPlayBotDeck(
-            tutorialDeck);
+        Deck orderedPlayerDeck =
+            CreateOrderedLearnToPlayDeck(
+                tutorialDeck);
 
-    Player player =
-        CreatePlayer(
+        Deck weakBotDeck =
+            CreateWeakLearnToPlayBotDeck(
+                tutorialDeck);
+
+        Player player = CreatePlayer(
             playerName,
             false,
             orderedPlayerDeck);
 
-    Player bot =
-        CreatePlayer(
+        Player bot = CreatePlayer(
             "Tutorial Bot",
             true,
             weakBotDeck);
 
-    return BattleEngine.StartMatch(
-        player,
-        bot,
-        GameMode.BotMatch,
-        forcePlayerOneStarts: true);
-}
+        return BattleEngine.StartMatch(
+            player,
+            bot,
+            GameMode.BotMatch,
+            forcePlayerOneStarts: true);
+    }
 
     public static MatchState StartDsaTutorialMatch(
         string playerName,
         TutorialType tutorial)
     {
+        BotManager.IsTutorialMode = true;
+
         Deck playerDeck =
             GetDsaTutorialDeck(
                 tutorial);
 
         /*
-            The Bot receives a normal Queue deck.
-
-            Only the player's deck needs to demonstrate
-            the selected structure. Using Queue for the
-            Bot avoids applying player-facing automatic
-            Stack behavior to both sides.
-        */
+         * The Bot receives a normal Queue deck.
+         *
+         * Only the player's deck needs to demonstrate
+         * the selected structure. Using Queue for the
+         * Bot avoids applying player-facing automatic
+         * Stack behavior to both sides.
+         */
         Deck botDeck =
             StarterDeckFactory.CreateQueueStarter();
 
@@ -160,6 +166,10 @@ public static MatchState StartLearnToPlayMatch(
                 "Tournament opponent deck could not be created.");
         }
 
+        // Tournament bots always use Medium difficulty.
+        BotManager.IsTutorialMode = false;
+        BotManager.Difficulty = BotDifficulty.Medium;
+
         Player player = CreatePlayer(
             playerName,
             false,
@@ -185,123 +195,109 @@ public static MatchState StartLearnToPlayMatch(
         {
             Name = name,
             IsBot = isBot,
-            Deck = DeckCloner.Clone(
-                deck)
+            Deck = DeckCloner.Clone(deck)
         };
     }
+
     private static Deck CreateOrderedLearnToPlayDeck(
-    Deck sourceDeck)
-{
-    Deck orderedDeck =
-        DeckCloner.Clone(
-            sourceDeck);
-
-    List<Card> orderedCards =
-        new();
-
-    foreach (string requiredId in
-             TutorialManager.LearnToPlayDeckOrder)
+        Deck sourceDeck)
     {
-        Card? card =
-            orderedDeck.Cards.FirstOrDefault(
-                candidate =>
-                    candidate.Id == requiredId);
+        Deck orderedDeck =
+            DeckCloner.Clone(sourceDeck);
 
-        if (card == null)
+        List<Card> orderedCards = new();
+
+        foreach (string requiredId in
+                 TutorialManager.LearnToPlayDeckOrder)
         {
-            throw new InvalidOperationException(
-                $"Learn to Play card {requiredId} " +
-                "could not be found in the Tutorial deck.");
+            Card? card =
+                orderedDeck.Cards.FirstOrDefault(
+                    candidate =>
+                        candidate.Id == requiredId);
+
+            if (card == null)
+            {
+                throw new InvalidOperationException(
+                    $"Learn to Play card {requiredId} " +
+                    "could not be found in the Tutorial deck.");
+            }
+
+            orderedCards.Add(card);
         }
 
-        orderedCards.Add(
-            card);
+        orderedDeck.Structure = DeckStructure.Queue;
+        orderedDeck.Cards = orderedCards;
+
+        return orderedDeck;
     }
 
-    orderedDeck.Structure =
-        DeckStructure.Queue;
-
-    orderedDeck.Cards =
-        orderedCards;
-
-    return orderedDeck;
-}
-private static Deck CreateWeakLearnToPlayBotDeck(
-    Deck sourceDeck)
-{
-    string[] botDeckOrder =
+    private static Deck CreateWeakLearnToPlayBotDeck(
+        Deck sourceDeck)
     {
-        "UM1",
-        "CN1",
-        "AP7",
-        "AM7",
-        "AP7",
-        "AM7",
-        "CM1",
-        "UN4",
-        "UN1",
-        "UN3",
-        "UM2",
-        "AM3"
-    };
-
-    List<Card> orderedCards =
-        new();
-
-    foreach (string requiredId in botDeckOrder)
-    {
-        /*
-            Clone the source for every requested card.
-
-            This is important for duplicate Attacks.
-            Each Pounce and Chain Lightning must be a
-            separate runtime Card instance.
-        */
-        Deck cardSource =
-            DeckCloner.Clone(
-                sourceDeck);
-
-        Card? card =
-            cardSource.Cards.FirstOrDefault(
-                candidate =>
-                    string.Equals(
-                        candidate.Id,
-                        requiredId,
-                        StringComparison.OrdinalIgnoreCase));
-
-        if (card == null)
+        string[] botDeckOrder =
         {
-            throw new InvalidOperationException(
-                $"Tutorial Bot card {requiredId} " +
-                "could not be found.");
-        }
-
-        orderedCards.Add(
-            card);
-    }
-
-    Deck botDeck =
-        new()
-        {
-            Name =
-                "Weak Tutorial Bot Deck",
-
-            Structure =
-                DeckStructure.Queue,
-
-            Cards =
-                orderedCards
+            "UM1",
+            "CN1",
+            "AP7",
+            "AM7",
+            "AP7",
+            "AM7",
+            "CM1",
+            "UN4",
+            "UN1",
+            "UN3",
+            "UM2",
+            "AM3"
         };
 
-    if (!RedPandaTCD_Web.Game.DeckBuilder.ValidateDeck(
-            botDeck,
-            out string validationError))
-    {
-        throw new InvalidOperationException(
-            "Weak Tutorial Bot deck is invalid: " +
-            validationError);
-    }
+        List<Card> orderedCards = new();
 
-    return botDeck;
-}
+        foreach (string requiredId in botDeckOrder)
+        {
+            /*
+             * Clone the source for every requested card.
+             *
+             * This is important for duplicate Attacks.
+             * Each Pounce and Chain Lightning must be a
+             * separate runtime Card instance.
+             */
+            Deck cardSource =
+                DeckCloner.Clone(sourceDeck);
+
+            Card? card =
+                cardSource.Cards.FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Id,
+                            requiredId,
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (card == null)
+            {
+                throw new InvalidOperationException(
+                    $"Tutorial Bot card {requiredId} " +
+                    "could not be found.");
+            }
+
+            orderedCards.Add(card);
+        }
+
+        Deck botDeck = new()
+        {
+            Name = "Weak Tutorial Bot Deck",
+            Structure = DeckStructure.Queue,
+            Cards = orderedCards
+        };
+
+        if (!RedPandaTCD_Web.Game.DeckBuilder.ValidateDeck(
+                botDeck,
+                out string validationError))
+        {
+            throw new InvalidOperationException(
+                "Weak Tutorial Bot deck is invalid: " +
+                validationError);
+        }
+
+        return botDeck;
+    }
 }

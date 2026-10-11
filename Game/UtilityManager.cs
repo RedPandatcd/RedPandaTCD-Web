@@ -7,269 +7,271 @@ public static class UtilityManager
     // ==========================================================
 
     public static bool PlayUtility(
-        Player player,
-        Player opponent,
-        int slotNumber)
+    Player player,
+    Player opponent,
+    int slotNumber)
+{
+    if (player.UtilityActionsRemaining <= 0)
     {
-        if (player.UtilityActionsRemaining <= 0)
-        {
-            return false;
-        }
+        return false;
+    }
 
-        if (slotNumber < 1 ||
-            slotNumber > Player.MAX_HAND_SIZE)
-        {
-            return false;
-        }
+    if (slotNumber < 1 ||
+        slotNumber > Player.MAX_HAND_SIZE)
+    {
+        return false;
+    }
 
-        HandSlot handSlot =
-            player.HandSlots[slotNumber - 1];
+    HandSlot handSlot =
+        player.HandSlots[slotNumber - 1];
 
-        if (handSlot.IsEmpty)
-        {
-            return false;
-        }
+    if (handSlot.IsEmpty)
+    {
+        return false;
+    }
 
-        if (handSlot.CardInSlot!.Type != CardType.Utility)
-        {
-            return false;
-        }
+    if (handSlot.CardInSlot!.Type != CardType.Utility)
+    {
+        return false;
+    }
 
-        Card card =
-            handSlot.CardInSlot;
+    Card card =
+        handSlot.CardInSlot;
 
-        // Discard For Energy requires
-        // a second card selection.
-        if (card.Name == "Discard For Energy")
-        {
-            return false;
-        }
+    // Discard For Energy requires
+    // a second card selection.
+    if (card.Name == "Discard For Energy")
+    {
+        return false;
+    }
 
-        int utilityCost =
-            player.GetEnergyCost(card.Cost);
+    int utilityCost =
+        player.GetEnergyCost(card.Cost);
 
-        if (player.Energy < utilityCost)
-        {
-            return false;
-        }
+    if (player.Energy < utilityCost)
+    {
+        return false;
+    }
 
-        if (card.Name == "Energy Drain" &&
-            player.EnergyDrainedThisPhaseCount >= 1)
-        {
-            return false;
-        }
+    if (card.Name == "Energy Drain" &&
+        player.EnergyDrainedThisPhaseCount >= 1)
+    {
+        return false;
+    }
 
-        player.Energy -=
-            utilityCost;
+    player.Energy -=
+        utilityCost;
 
-        handSlot.CardInSlot = null;
+    handSlot.CardInSlot = null;
 
-        player.DiscardPile.Add(
-            card);
+    player.DiscardPile.Add(
+        card);
 
-        player.UtilityActionsRemaining--;
+    player.UtilityActionsRemaining--;
 
-        // ======================================================
+    switch (card.Name)
+    {
+        // ==================================================
         // ENERGY POTION
-        // ======================================================
+        // ==================================================
 
-        switch (card.Name)
+        case "Energy Potion":
         {
-            case "Energy Potion":
+            int before =
+                player.Energy;
+
+            player.Energy =
+                Math.Min(
+                    player.MaxEnergy,
+                    player.Energy + 3);
+
+            int gained =
+                player.Energy - before;
+
+            BattleLog.WriteReplay(
+                $"{player.Name} used Energy Potion " +
+                $"(+{gained} Energy, " +
+                $"{player.Energy} Total)",
+                BattleLog.CurrentTurnNumber,
+                BattleLog.CurrentPlayerIndex,
+                BattleLogEventType.Utility,
+                card.Name,
+                card.Type,
+                player.Deck.Structure,
+                slotNumber: slotNumber,
+                amount: gained,
+                playerEnergy: player.Energy);
+
+            break;
+        }
+
+        // ==================================================
+        // ENERGY DRAIN
+        // ==================================================
+
+        case "Energy Drain":
+        {
+            if (player.EnergyDrainedThisPhaseCount < 1)
             {
-                int before =
-                    player.Energy;
+                player.EnergyDrainedThisPhaseCount++;
+
+                opponent.Energy =
+                    Math.Max(
+                        1,
+                        opponent.Energy - 3);
 
                 player.Energy =
                     Math.Min(
                         player.MaxEnergy,
                         player.Energy + 3);
 
-                int gained =
-                    player.Energy - before;
-
                 BattleLog.WriteReplay(
-                    $"{player.Name} used Energy Potion " +
-                    $"(+{gained} Energy, " +
-                    $"{player.Energy} Total)",
+                    $"{player.Name} used Energy Drain " +
+                    $"({opponent.Name}: {opponent.Energy} Energy, " +
+                    $"{player.Name}: {player.Energy} Energy)",
                     BattleLog.CurrentTurnNumber,
                     BattleLog.CurrentPlayerIndex,
                     BattleLogEventType.Utility,
                     card.Name,
                     card.Type,
                     player.Deck.Structure,
+                    targetPlayerIndex:
+                        BattleLog.GetOpponentPlayerIndex(),
+                    amount: 3,
                     slotNumber: slotNumber,
-                    amount: gained,
-                    playerEnergy: player.Energy);
-
-                break;
+                    playerEnergy: player.Energy,
+                    opponentEnergy: opponent.Energy);
             }
 
-            // ==================================================
-            // ENERGY DRAIN
-            // ==================================================
-
-            case "Energy Drain":
-            {
-                if (player.EnergyDrainedThisPhaseCount < 1)
-                {
-                    player.EnergyDrainedThisPhaseCount++;
-
-                    opponent.Energy =
-                        Math.Max(
-                            1,
-                            opponent.Energy - 3);
-
-                    player.Energy =
-                        Math.Min(
-                            player.MaxEnergy,
-                            player.Energy + 3);
-
-                    BattleLog.WriteReplay(
-                        $"{player.Name} used Energy Drain " +
-                        $"({opponent.Name}: {opponent.Energy} Energy, " +
-                        $"{player.Name}: {player.Energy} Energy)",
-                        BattleLog.CurrentTurnNumber,
-                        BattleLog.CurrentPlayerIndex,
-                        BattleLogEventType.Utility,
-                        card.Name,
-                        card.Type,
-                        player.Deck.Structure,
-                        targetPlayerIndex:
-                            BattleLog.GetOpponentPlayerIndex(),
-                        amount: 2,
-                        slotNumber: slotNumber,
-                        playerEnergy: player.Energy,
-                        opponentEnergy: opponent.Energy);
-                }
-
-                break;
-            }
-
-            // ==================================================
-            // ATTACK AMPLIFIER
-            // ==================================================
-
-            case "Attack Amplifier":
-            {
-                player.TemporaryAttackBonus++;
-
-                BattleLog.WriteReplay(
-                    $"{player.Name} used Attack Amplifier " +
-                    $"(+1 Attack Damage)",
-                    BattleLog.CurrentTurnNumber,
-                    BattleLog.CurrentPlayerIndex,
-                    BattleLogEventType.Utility,
-                    card.Name,
-                    card.Type,
-                    player.Deck.Structure,
-                    slotNumber: slotNumber,
-                    amount: 1);
-
-                break;
-            }
-
-            // ==================================================
-            // DEFENSIVE STANCE
-            // ==================================================
-
-            case "Defensive Stance":
-            {
-                player.StatusEffects.Add(
-                    "DeflectNextHit");
-
-                BattleLog.WriteReplay(
-                    $"{player.Name} used Defensive Stance " +
-                    $"(Deflect Next Hit)",
-                    BattleLog.CurrentTurnNumber,
-                    BattleLog.CurrentPlayerIndex,
-                    BattleLogEventType.Utility,
-                    card.Name,
-                    card.Type,
-                    player.Deck.Structure,
-                    slotNumber: slotNumber);
-
-                break;
-            }
-
-            // ==================================================
-            // SHIELD BOOSTER
-            // ==================================================
-
-            case "Shield Booster":
-            {
-                player.Shield +=
-                    2;
-
-                BattleLog.WriteReplay(
-                    $"{player.Name} used Shield Booster " +
-                    $"(+3 Shield, {player.Shield} Total)",
-                    BattleLog.CurrentTurnNumber,
-                    BattleLog.CurrentPlayerIndex,
-                    BattleLogEventType.Utility,
-                    card.Name,
-                    card.Type,
-                    player.Deck.Structure,
-                    slotNumber: slotNumber,
-                    amount: 2,
-                    playerShield: player.Shield);
-
-                break;
-            }
-
-            // ==================================================
-            // FORTIFY
-            // ==================================================
-
-            case "Shield Breaker":
-                {
-                    int removedShield = Math.Min(
-                        3,
-                        Math.Max(0, opponent.Shield));
-
-                    opponent.Shield -= removedShield;
-
-                    BattleLog.WriteReplay(
-                        $"{player.Name} used Shield Breaker " +
-                        $"(-{removedShield} Shield, {opponent.Shield} Remaining)",
-                        BattleLog.CurrentTurnNumber,
-                        BattleLog.CurrentPlayerIndex,
-                        BattleLogEventType.Utility,
-                        card.Name,
-                        card.Type,
-                        player.Deck.Structure,
-                        slotNumber: slotNumber,
-                        amount: removedShield,
-                        playerShield: player.Shield);
-
-                    break;
-                }
-
-            // ==================================================
-            // DISCOUNT COUPON
-            // ==================================================
-
-            case "Discount Coupon":
-            {
-                player.DiscountActive = true;
-
-                BattleLog.WriteReplay(
-                    $"{player.Name} used Discount Coupon " +
-                    $"(All Energy Costs Reduced by 1 This Turn)",
-                    BattleLog.CurrentTurnNumber,
-                    BattleLog.CurrentPlayerIndex,
-                    BattleLogEventType.Utility,
-                    card.Name,
-                    card.Type,
-                    player.Deck.Structure,
-                    slotNumber: slotNumber);
-
-                break;
-            }
+            break;
         }
 
-        return true;
+        // ==================================================
+        // ATTACK AMPLIFIER
+        // ==================================================
+
+        case "Attack Amplifier":
+        {
+            player.TemporaryAttackBonus++;
+
+            BattleLog.WriteReplay(
+                $"{player.Name} used Attack Amplifier " +
+                $"(+1 Attack Damage)",
+                BattleLog.CurrentTurnNumber,
+                BattleLog.CurrentPlayerIndex,
+                BattleLogEventType.Utility,
+                card.Name,
+                card.Type,
+                player.Deck.Structure,
+                slotNumber: slotNumber,
+                amount: 1);
+
+            break;
+        }
+
+        // ==================================================
+        // DEFENSIVE STANCE
+        // ==================================================
+
+        case "Defensive Stance":
+        {
+            player.StatusEffects.Add(
+                "DeflectNextHit");
+
+            BattleLog.WriteReplay(
+                $"{player.Name} used Defensive Stance " +
+                $"(Deflect Next Hit)",
+                BattleLog.CurrentTurnNumber,
+                BattleLog.CurrentPlayerIndex,
+                BattleLogEventType.Utility,
+                card.Name,
+                card.Type,
+                player.Deck.Structure,
+                slotNumber: slotNumber);
+
+            break;
+        }
+
+        // ==================================================
+        // SHIELD BOOSTER
+        // ==================================================
+
+        case "Shield Booster":
+        {
+            player.Shield +=
+                3;
+
+            BattleLog.WriteReplay(
+                $"{player.Name} used Shield Booster " +
+                $"(+3 Shield, {player.Shield} Total)",
+                BattleLog.CurrentTurnNumber,
+                BattleLog.CurrentPlayerIndex,
+                BattleLogEventType.Utility,
+                card.Name,
+                card.Type,
+                player.Deck.Structure,
+                slotNumber: slotNumber,
+                amount: 3,
+                playerShield: player.Shield);
+
+            break;
+        }
+
+        // ==================================================
+        // SHIELD BREAKER
+        // ==================================================
+
+        case "Shield Breaker":
+        {
+            int removedShield = Math.Min(
+                3,
+                Math.Max(0, opponent.Shield));
+
+            opponent.Shield -= removedShield;
+
+            BattleLog.WriteReplay(
+                $"{player.Name} used Shield Breaker " +
+                $"(-{removedShield} Shield, {opponent.Shield} Remaining)",
+                BattleLog.CurrentTurnNumber,
+                BattleLog.CurrentPlayerIndex,
+                BattleLogEventType.Utility,
+                card.Name,
+                card.Type,
+                player.Deck.Structure,
+                targetPlayerIndex:
+                    BattleLog.GetOpponentPlayerIndex(),
+                slotNumber: slotNumber,
+                amount: removedShield,
+                opponentShield: opponent.Shield);
+
+            break;
+        }
+
+        // ==================================================
+        // DISCOUNT COUPON
+        // ==================================================
+
+        case "Discount Coupon":
+        {
+            player.DiscountActive = true;
+
+            BattleLog.WriteReplay(
+                $"{player.Name} used Discount Coupon " +
+                $"(All Energy Costs Reduced by 1 This Turn)",
+                BattleLog.CurrentTurnNumber,
+                BattleLog.CurrentPlayerIndex,
+                BattleLogEventType.Utility,
+                card.Name,
+                card.Type,
+                player.Deck.Structure,
+                slotNumber: slotNumber);
+
+            break;
+        }
     }
+
+    return true;
+}
 
 
     // ==========================================================
@@ -524,48 +526,56 @@ public static class UtilityManager
     // START REORDER NODES
     // ==========================================================
 
-    public static bool StartReorderNodes(
-        Player player)
+   public static bool StartReorderNodes(
+    Player player)
+{
+    if (player.Deck.Structure !=
+        DeckStructure.LinkedList)
     {
-        if (player.Deck.Structure !=
-            DeckStructure.LinkedList)
-        {
-            return false;
-        }
+        return false;
+    }
 
-        if (player.IsReorderingNodes)
-        {
-            return true;
-        }
-
-        if (player.UtilityActionsRemaining <= 0)
-        {
-            return false;
-        }
-
-        if (player.Deck.RuntimeStorage == null ||
-            player.Deck.RuntimeStorage.Count == 0)
-        {
-            return false;
-        }
-
-        player.UtilityActionsRemaining--;
-
-        player.ReorderMovesThisPhase = 0;
-
-        player.IsReorderingNodes = true;
-
-        BattleLog.WriteReplay(
-            $"{player.Name} started Reorder Nodes",
-            BattleLog.CurrentTurnNumber,
-            BattleLog.CurrentPlayerIndex,
-            BattleLogEventType.Utility,
-            deckStructure:
-                player.Deck.Structure);
-
+    if (player.IsReorderingNodes)
+    {
         return true;
     }
 
+    bool freeReorder =
+        CharacterManager.HasPassive(
+            player,
+            "FreePeek");
+
+    if (!freeReorder &&
+        player.UtilityActionsRemaining <= 0)
+    {
+        return false;
+    }
+
+    if (player.Deck.RuntimeStorage == null ||
+        player.Deck.RuntimeStorage.Count == 0)
+    {
+        return false;
+    }
+
+    if (!freeReorder)
+    {
+        player.UtilityActionsRemaining--;
+    }
+
+    player.ReorderMovesThisPhase = 0;
+
+    player.IsReorderingNodes = true;
+
+    BattleLog.WriteReplay(
+        $"{player.Name} started Reorder Nodes",
+        BattleLog.CurrentTurnNumber,
+        BattleLog.CurrentPlayerIndex,
+        BattleLogEventType.Utility,
+        deckStructure:
+            player.Deck.Structure);
+
+    return true;
+}
 
     // ==========================================================
     // REORDER NODES

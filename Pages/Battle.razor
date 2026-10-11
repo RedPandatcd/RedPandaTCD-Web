@@ -5310,7 +5310,8 @@ UpdateReplayContext();
             deckHasCards &&
             player.Deck.Structure is
                 DeckStructure.Queue or
-                DeckStructure.Stack)
+                DeckStructure.Stack or
+               DeckStructure.LinkedList)
         {
             return true;
         }
@@ -5409,8 +5410,9 @@ UpdateReplayContext();
         return false;
     }
 
-    if (player.Deck.Structure ==
+        if (player.Deck.Structure ==
             DeckStructure.LinkedList &&
+        !freePeek &&
         player.UtilityActionsRemaining <= 0)
     {
         return false;

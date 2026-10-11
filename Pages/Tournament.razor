@@ -1999,6 +1999,7 @@ private void BeginTournament()
         {
             Session.CurrentMatch =
                 GameSetupManager.StartTournamentMatch(
+                    BotManager.Difficulty = BotDifficulty.Medium;
                     Session.PlayerName,
                     Session.Tournament);
 
