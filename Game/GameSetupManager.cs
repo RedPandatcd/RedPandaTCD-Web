@@ -237,7 +237,7 @@ private static Deck CreateWeakLearnToPlayBotDeck(
         "AM7",
         "AP7",
         "AM7",
-        "CM2",
+        "CM1",
         "UN4",
         "UN1",
         "UN3",

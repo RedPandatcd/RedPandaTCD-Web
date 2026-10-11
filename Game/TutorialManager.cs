@@ -52,7 +52,7 @@ public static class TutorialManager
         new List<string>
         {
             // Characters
-            "CM2",
+            "CM1",
             "CN1",
             "AM3",
             "AM6",
@@ -70,7 +70,7 @@ public static readonly IReadOnlyList<string>
     new List<string>
     {
         "UM1",
-        "CM2",
+        "CM1",
         "AM6",
         "AP4",
         "AM3",
@@ -2102,7 +2102,7 @@ public static string GetLearnToPlayDeckInstruction(
         "UM1" =>
     "Your next card is Energy Potion.\n\nMagic • Utility\n\nUse the Utilities and Magic filters below to find it quickly, then press + to add it to your Tutorial Deck.",
 
-"CM2" =>
+"CM1" =>
     "Your next card is Sorcerer Red Panda.\n\nMagic • Character\n\nUse the Characters and Magic filters below to find it quickly, then press + to add it to your Tutorial Deck.",
 
 "AM6" =>
