@@ -20,28 +20,36 @@ public static class HandManager
         return player.HandSlots.FirstOrDefault(s => s.IsEmpty);
     }
 
-    public static void RecycleDiscardPile(
-        Player player)
+    
+public static void RecycleDiscardPile(Player player)
+{
+    if (player.DiscardPile.Count == 0)
     {
-        if (player.DiscardPile.Count == 0)
-        {
-            return;
-        }
-
-        int recycledCount =
-            player.DiscardPile.Count;
-
-        foreach (Card card in player.DiscardPile)
-        {
-            player.Deck.RuntimeStorage!.Add(card);
-        }
-
-        player.DiscardPile.Clear();
-
-        BattleLog.Write(
-            $"{player.Name} recycled their discard pile " +
-            $"into their deck ({recycledCount} card(s))");
+        return;
     }
+
+    int recycledCount = player.DiscardPile.Count;
+
+    IEnumerable<Card> cardsToRecycle = player.DiscardPile;
+
+    if (player.Deck.Structure == DeckStructure.LinkedList)
+    {
+        cardsToRecycle = cardsToRecycle
+            .OrderBy(_ => GameRandom.Instance.Next());
+    }
+
+    foreach (Card card in cardsToRecycle.ToList())
+    {
+        player.Deck.RuntimeStorage!.Add(card);
+    }
+
+    player.DiscardPile.Clear();
+
+    BattleLog.Write(
+        $"{player.Name} recycled their discard pile " +
+        $"into their deck ({recycledCount} card(s))");
+}
+
 
     public static void DrawCard(Player player)
     {
@@ -177,6 +185,9 @@ public static class HandManager
     {
         const int openingTurnNumber = 1;
 
+        bool isDsaTutorialDeck =
+            player.Deck.Name.StartsWith("DSA Tutorial", StringComparison.Ordinal);
+
         if (player.Deck.Structure == DeckStructure.RandomList &&
             player.Deck.RuntimeStorage is RandomListDeckStorage randomStorage)
         {
@@ -203,10 +214,25 @@ public static class HandManager
             }
         }
 
-        DrawUntilHandSize(
-            player,
-            playerIndex,
-            openingTurnNumber);
+        if (isDsaTutorialDeck)
+        {
+            // The DSA tutorial always opens with three cards, regardless of
+            // the structure-specific hand size used after End phase.
+            while (CountCards(player) < 3)
+            {
+                int previousHandSize = CountCards(player);
+                DrawCard(player, playerIndex, openingTurnNumber);
+                if (CountCards(player) == previousHandSize)
+                    break;
+            }
+        }
+        else
+        {
+            DrawUntilHandSize(
+                player,
+                playerIndex,
+                openingTurnNumber);
+        }
     }
 
     public static void DiscardCard(

@@ -1,0 +1,137 @@
+diff --git a/Game/MatchManager.cs b/Game/MatchManager.cs
+index f987db2..535f6bf 100644
+--- a/Game/MatchManager.cs
++++ b/Game/MatchManager.cs
+@@ -52,8 +52,34 @@ public static class MatchManager
+ 
+         DeckStructureManager.PrepareDeckForMatch(player);
+ 
++        // For the Priority Queue tutorial, keep the sample Character out of
++        // the opening hand while the runtime priority queue is initialized.
++        // The queue stores its priority key at Add-time, so we can restore
++        // the card's real priority (5) before gameplay and still demonstrate
++        // that it is drawn first after the tutorial recycles it.
++        Card? priorityQueueSampleCharacter = null;
++        bool isPriorityQueueTutorial =
++            player.Deck.Name.StartsWith("DSA Tutorial", StringComparison.Ordinal) &&
++            player.Deck.Structure == DeckStructure.PriorityQueue;
++
++        if (isPriorityQueueTutorial)
++        {
++            priorityQueueSampleCharacter = player.Deck.Cards
++                .LastOrDefault(card => card.Type == CardType.Character);
++
++            if (priorityQueueSampleCharacter != null)
++            {
++                priorityQueueSampleCharacter.Priority = 1;
++            }
++        }
++
+         player.Deck.InitializeRuntimeStorage();
+ 
++        if (priorityQueueSampleCharacter != null)
++        {
++            priorityQueueSampleCharacter.Priority = 5;
++        }
++
+        HandManager.DrawOpeningHand(
+     player,
+     playerIndex);
+diff --git a/Game/StarterDeckFactory.cs b/Game/StarterDeckFactory.cs
+index 9684409..31be2ae 100644
+--- a/Game/StarterDeckFactory.cs
++++ b/Game/StarterDeckFactory.cs
+@@ -15,16 +15,21 @@ public static class StarterDeckFactory
+         Card firstAttack = CardFactory.CreateFireball();
+         Card secondAttack = CardFactory.CreateStab();
+         Card sampleOne = CardFactory.CreateIceShards();
+-        Card sampleTwo = CardFactory.CreateDoubleClaw();
+-
+-        // The same five-card tutorial deck is used by Queue, Stack,
+-        // and Priority Queue. Priorities make the character and attacks
+-        // the opening hand for the Priority Queue.
++        Card sampleTwo = structure == DeckStructure.LinkedList
++            ? CardFactory.CreateDoubleClaw()
++            : CardFactory.CreateWandererRedPanda();
++
++        // Queue, Stack, and Priority Queue share an Attack (priority 2)
++        // and a Character (priority 5) as their two demonstration cards.
++        // Linked List keeps its original two-Attack nodes for reordering.
++        // Priority Queue temporarily enqueues the sample Character at
++        // priority 1 so it cannot replace an Attack in the opening hand;
++        // the tutorial's scripted discard restores it to priority 5.
+         character.Priority = 5;
+         firstAttack.Priority = 4;
+         secondAttack.Priority = 4;
+         sampleOne.Priority = 2;
+-        sampleTwo.Priority = 1;
++        sampleTwo.Priority = sampleTwo.Type == CardType.Character ? 5 : 1;
+ 
+         switch (structure)
+         {
+diff --git a/Game/TutorialManager.cs b/Game/TutorialManager.cs
+index 4eba2d0..9fc5d44 100644
+--- a/Game/TutorialManager.cs
++++ b/Game/TutorialManager.cs
+@@ -918,7 +918,7 @@ private static readonly IReadOnlyList<TutorialStep> QueueSteps =
+             DeckStructure.LinkedList =>
+                 "Click the deck and choose Reorder Nodes. Move one of the two remaining nodes and finish. These nodes stay connected in the deck; they will be drawn before the two cards already in the discard pile are recycled.",
+             _ =>
+-                "The Priority Queue has no manual peek or reorder action. Press Next to finish this explanation. Its two sample cards will be placed in the discard pile so the priority-based retrieval can be demonstrated during recycling."
++                "The Priority Queue has no manual peek or reorder action. Continue to place the sample Attack, Ice Shards (priority 2), and Character, Wanderer Red Panda (priority 5), in the discard pile. When recycled, the Character should be drawn first because it has higher priority."
+         };
+ 
+         List<TutorialStep> steps = new();
+@@ -938,7 +938,7 @@ private static readonly IReadOnlyList<TutorialStep> QueueSteps =
+             {
+                 DeckStructure.Queue => "A Queue draws from the front: first in, first out (FIFO). The two sample cards will be recycled in the order they entered the discard pile.",
+                 DeckStructure.Stack => "A Stack draws from the top: last in, first out (LIFO). Recycled cards are pushed onto the top, so the last card pushed is drawn first.",
+-                DeckStructure.PriorityQueue => "A Priority Queue retrieves higher-priority cards first. The sample cards have different priorities, so you can observe priority—not discard order—deciding which is drawn first.",
++                DeckStructure.PriorityQueue => "A Priority Queue retrieves higher-priority cards first. Watch the Character (priority 5) come before Ice Shards (priority 2), even if discard order is different.",
+                 DeckStructure.RandomList => "A Random List chooses a card randomly from the remaining pool. You will inspect the three-card pool and later see cards drawn randomly after they are recycled.",
+                 _ => "A Linked List stores cards as connected nodes. Drawing removes the head node; reordering changes which existing node comes first. Recycled cards are randomized among themselves and appended to the tail."
+             }, TutorialAction.Acknowledge, "player-deck");
+@@ -997,7 +997,7 @@ private static readonly IReadOnlyList<TutorialStep> QueueSteps =
+             {
+                 DeckStructure.Queue => "Press Continue. With the Queue empty, its discarded cards are enqueued in discard order. They will be drawn from the front, first in, first out.",
+                 DeckStructure.Stack => "Press Continue. With the Stack empty, each discarded card is pushed onto the top. The last card pushed becomes the next card drawn.",
+-                DeckStructure.PriorityQueue => "Press Continue. With the Priority Queue empty, discarded cards are reinserted using their priority values. The highest-priority card is drawn first.",
++                DeckStructure.PriorityQueue => "Press Continue. With the Priority Queue empty, the recycled Character (priority 5) is reinserted ahead of Ice Shards (priority 2), regardless of discard order.",
+                 DeckStructure.RandomList => "Press Continue. With the random pool empty, the discarded cards return to the pool. Future draws choose randomly rather than following discard order.",
+                 _ => "Press Continue. The two reordered Linked List nodes are drawn first. Once they are gone, the two cards from the discard pile are randomized and appended to the tail as new nodes; the original nodes are not shuffled or recycled."
+             }, TutorialAction.ContinuePhase, "continue-button");
+@@ -1006,7 +1006,7 @@ private static readonly IReadOnlyList<TutorialStep> QueueSteps =
+             {
+                 DeckStructure.Queue => "Back in Utility, the two recycled cards should be in your hand and the deck should be empty. The Queue draws them in queue order.",
+                 DeckStructure.Stack => "Back in Utility, the two recycled cards should be in your hand and the deck should be empty. The Stack draws in reverse push order.",
+-                DeckStructure.PriorityQueue => "Back in Utility, the two recycled cards should be in your hand and the deck should be empty. Priority determines which one appears first.",
++                DeckStructure.PriorityQueue => "Back in Utility, the deck should be empty and both recycled cards should be in your hand. Wanderer Red Panda (priority 5) should appear before Ice Shards (priority 2).",
+                 DeckStructure.RandomList => "Back in Utility, three recycled cards should be in your hand and the random pool should be empty. Their hand order reflects random retrieval.",
+                 _ => "Back in Utility, four cards should be in your hand and the deck should be empty: the two original reordered nodes were drawn first, followed by the two recycled cards that were shuffled before being appended to the tail."
+             }, TutorialAction.Acknowledge, "player-hand");
+diff --git a/Pages/Battle.razor b/Pages/Battle.razor
+index 0b0dd70..e6702e1 100644
+--- a/Pages/Battle.razor
++++ b/Pages/Battle.razor
+@@ -5642,8 +5642,19 @@ UpdateReplayContext();
+         while (player.Deck.RuntimeStorage.Count > 0)
+         {
+             Card? card = player.Deck.RuntimeStorage.Draw();
+-            if (card != null)
+-                player.DiscardPile.Add(card);
++            if (card == null)
++                continue;
++
++            // Keep the Priority Queue tutorial sample Character at its real
++            // priority before recycling. Initialization temporarily lowered
++            // its stored queue key so it could not replace an opening Attack.
++            if (player.Deck.Structure == DeckStructure.PriorityQueue &&
++                card.Type == CardType.Character)
++            {
++                card.Priority = 5;
++            }
++
++            player.DiscardPile.Add(card);
+         }
+ 
+         BattleLog.WriteSystem(

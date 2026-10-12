@@ -10,6 +10,16 @@ public static class DeckStructureManager
 
     public static int GetHandSize(Deck deck)
     {
+        if (deck.Name.StartsWith("DSA Tutorial", StringComparison.Ordinal))
+        {
+            return deck.Structure switch
+            {
+                DeckStructure.RandomList => 3,
+                DeckStructure.LinkedList => 4,
+                _ => 2
+            };
+        }
+
         if (deck.Structure == DeckStructure.RandomList)
         {
             return 5;
@@ -69,8 +79,11 @@ public static class DeckStructureManager
                 break;
 
             case DeckStructure.LinkedList:
-                ShuffleDeck(player);
-                EnsureCharacterInFirstFour(player);
+                if (!player.Deck.Name.StartsWith("DSA Tutorial", StringComparison.Ordinal))
+                {
+                    ShuffleDeck(player);
+                    EnsureCharacterInFirstFour(player);
+                }
                 break;
         }
     }

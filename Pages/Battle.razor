@@ -122,7 +122,8 @@ else
         </small>
     </div>
 
-    <div class="discard @GetTutorialFocusClass("discard-pile")">
+    <div class="discard @GetTutorialFocusClass("discard-pile") @(CanOpenTutorialDiscardPile ? "tutorial-discard-clickable" : "")"
+         @onclick="OpenTutorialDiscardPile">
         <strong>DISCARD</strong>
 
         <span class="pile-number">
@@ -382,6 +383,17 @@ else
                     Title="Draw Pool"
                     Cards="drawPoolCards"
                     OnClose="CloseDrawPool" />
+            </div>
+        }
+
+        @if (discardPileCards != null)
+        {
+            <div class="component-popup-layer">
+                <CardViewer
+                    @key="discardPileCards"
+                    Title="Discard Pile — Recycling Preview"
+                    Cards="discardPileCards"
+                    OnClose="CloseTutorialDiscardPile" />
             </div>
         }
 
@@ -3870,6 +3882,7 @@ else
         width: 100%;
     }
 }
+    .tutorial-discard-clickable { cursor: pointer; outline: 2px solid #f0c674; outline-offset: 3px; }
 </style>
 @code
 {
@@ -3884,12 +3897,7 @@ else
     private bool finishedTournamentMatch, showDeckAction, showCharacterPicker;
     private bool showFatiguedAttackActions, awaitingWandererEntry;
 
-    private bool dsaRecyclePrepared;
-    private bool dsaRecycleResolved;
     private bool linkedNodeMoved;
-
-    private int dsaRecycleCardCount;
-    private const int DsaRecycleSampleSize = 4;
 
     private string? pendingNavigationUrl;
     private Func<bool>? pendingZeroEnergyAction;
@@ -3900,7 +3908,7 @@ else
     private HandSlot? selectedHandSlot;
     private int? selectedPlacementAttackSlot;
 
-    private List<Card>? peekedCards, drawPoolCards, reorderCards;
+    private List<Card>? peekedCards, drawPoolCards, reorderCards, discardPileCards;
 
     private bool showDiscardForEnergyPicker;
     private int? discardForEnergyUtilitySlot;
@@ -3945,10 +3953,6 @@ private bool IsReplayMode =>
         showCoinFlipDialog = true;
         coinFlipAcknowledged = false;
 
-        if (IsDsaTutorialBattle)
-        {
-            PrepareDsaTutorialBattle();
-        }
     }
 
     protected override async Task OnAfterRenderAsync(
@@ -4337,6 +4341,11 @@ private void RefreshReplayDisplay()
     TutorialManager.CompleteTutorial(
         Session.Tutorial);
 
+    // Record completion first, then clear active state so a later
+    // Training Bot match cannot inherit the completed tutorial overlay.
+    TutorialManager.ExitTutorial(
+        Session.Tutorial);
+
     Session.CurrentMatch = null;
     allowNavigation = true;
 
@@ -4519,8 +4528,9 @@ private void RefreshReplayDisplay()
     $"ActingPlayer={match.GetActingPlayer().Name}, " +
     $"BotIsActing={botIsActing}");
         if (IsGuidedTutorialBattle &&
-            actionBeforePhaseChange ==
-                TutorialAction.ContinuePhase)
+            actionBeforePhaseChange == TutorialAction.ContinuePhase &&
+            !(previousPhase == MatchPhase.Attack &&
+              IsDsaRecycleContinuePending))
         {
             NotifyTutorialAction(
                 TutorialAction.ContinuePhase);
@@ -4669,8 +4679,8 @@ private void RefreshReplayDisplay()
             }
             
             if (IsGuidedTutorialBattle &&
-                tutorialActionBeforeEnd ==
-                    TutorialAction.ContinuePhase)
+                tutorialActionBeforeEnd == TutorialAction.ContinuePhase &&
+                !IsDsaRecycleContinuePending)
             {
                 NotifyTutorialAction(
                     TutorialAction.ContinuePhase);
@@ -4684,25 +4694,33 @@ private void RefreshReplayDisplay()
         }
     }
 
-    private async Task HandleTutorialPhaseTransition(
+    private bool IsDsaRecycleContinuePending =>
+        IsDsaTutorialBattle &&
+        RequiredTutorialAction == TutorialAction.ContinuePhase &&
+        string.Equals(
+            TutorialManager.GetCurrentStep(Session.Tutorial)?.Title,
+            "Watch the End-Phase Recycling",
+            StringComparison.Ordinal);
+
+    private Task HandleTutorialPhaseTransition(
         MatchPhase previousPhase,
         int previousTurn)
     {
-        if (!IsGuidedTutorialBattle ||
-            Session.CurrentMatch == null)
+        MatchState? match = Session.CurrentMatch;
+
+        // Keep the recycling instruction visible while the normal End phase
+        // resolves automatically. Only advance to the observation step once
+        // the next Utility phase has actually begun and the new hand is visible.
+        if (match != null &&
+            IsDsaRecycleContinuePending &&
+            previousTurn < match.TurnNumber &&
+            match.CurrentPhase == MatchPhase.Utility &&
+            match.GetActingPlayer() == GetPresentedPlayer())
         {
-            return;
+            NotifyTutorialAction(TutorialAction.ContinuePhase);
         }
 
-        MatchState match =
-            Session.CurrentMatch;
-
-        if (previousPhase == MatchPhase.End &&
-            match.TurnNumber > previousTurn &&
-            IsDsaTutorialBattle)
-        {
-            await ResolveDsaRecycleDemonstration();
-        }
+        return Task.CompletedTask;
     }
     
     // 5. BOT TURN HANDLING
@@ -5518,8 +5536,13 @@ UpdateReplayContext();
         peekedCards = result;
         showDeckAction = false;
 
-        NotifyTutorialAction(
-            TutorialAction.PeekDeck);
+        bool wasDsaPeek = IsDsaTutorialBattle &&
+            RequiredTutorialAction == TutorialAction.PeekDeck;
+
+        NotifyTutorialAction(TutorialAction.PeekDeck);
+
+        if (wasDsaPeek)
+            DiscardRemainingTutorialSampleCards(player);
 
         StateHasChanged();
     }
@@ -5558,14 +5581,19 @@ UpdateReplayContext();
         drawPoolCards = result;
         showDeckAction = false;
 
+        bool wasDsaPoolView = IsDsaTutorialBattle &&
+            actionBeforeView == TutorialAction.ViewDrawPool;
+
         if (IsGuidedTutorialBattle &&
-            actionBeforeView ==
-                TutorialAction.ViewDrawPool)
+            actionBeforeView == TutorialAction.ViewDrawPool)
         {
             TutorialManager.NotifyAction(
                 Session.Tutorial,
                 TutorialAction.ViewDrawPool);
         }
+
+        if (wasDsaPoolView)
+            DiscardRemainingTutorialSampleCards(player);
 
         StateHasChanged();
     }
@@ -5574,6 +5602,63 @@ UpdateReplayContext();
     {
         drawPoolCards = null;
         StateHasChanged();
+    }
+
+    private bool CanOpenTutorialDiscardPile =>
+        IsDsaTutorialBattle &&
+        RequiredTutorialAction == TutorialAction.ViewDiscardPile &&
+        discardPileCards == null;
+
+    private void OpenTutorialDiscardPile()
+    {
+        if (!CanOpenTutorialDiscardPile ||
+            Session.CurrentMatch == null)
+        {
+            return;
+        }
+
+        Player player = GetPresentedPlayer();
+        discardPileCards = player.DiscardPile.ToList();
+        StateHasChanged();
+    }
+
+    private Task CloseTutorialDiscardPile()
+    {
+        if (discardPileCards != null)
+        {
+            discardPileCards = null;
+            NotifyTutorialAction(TutorialAction.ViewDiscardPile);
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private static void DiscardRemainingTutorialSampleCards(Player player)
+    {
+        if (player.Deck.RuntimeStorage == null)
+            return;
+
+        while (player.Deck.RuntimeStorage.Count > 0)
+        {
+            Card? card = player.Deck.RuntimeStorage.Draw();
+            if (card == null)
+                continue;
+
+            // Keep the Priority Queue tutorial sample Character at its real
+            // priority before recycling. Initialization temporarily lowered
+            // its stored queue key so it could not replace an opening Attack.
+            if (player.Deck.Structure == DeckStructure.PriorityQueue &&
+                card.Type == CardType.Character)
+            {
+                card.Priority = 5;
+            }
+
+            player.DiscardPile.Add(card);
+        }
+
+        BattleLog.WriteSystem(
+            $"{player.Name}'s tutorial sample cards were moved to the discard pile.");
     }
 
     private void StartReorderNodes()
@@ -5714,10 +5799,17 @@ UpdateReplayContext();
             return false;
         }
 
-        if (!IsGuidedTutorialBattle ||
-            IsDsaTutorialBattle)
+        if (!IsGuidedTutorialBattle)
         {
             return true;
+        }
+
+        if (IsDsaTutorialBattle)
+        {
+            // DSA tutorials require the Character before allowing attacks
+            // to be placed, and require each attack placement to be completed
+            // before the tutorial advances to Attack.
+            return RequiredTutorialAction == TutorialAction.DeployAttack;
         }
 
         return RequiredTutorialAction is
@@ -5755,6 +5847,13 @@ UpdateReplayContext();
             slot == 1
                 ? player.AttackSlot1
                 : player.AttackSlot2;
+
+        if (IsDsaTutorialBattle && deployed != null)
+        {
+            // Each DSA placement step fills the next empty Attack slot;
+            // replacing an already placed attack would strand the tutorial.
+            return;
+        }
 
         bool fatigued =
             slot == 1
@@ -5896,7 +5995,7 @@ UpdateReplayContext();
 
         selectedPlacementAttackSlot = null;
 
-        if (IsLearnToPlayBattle)
+        if (IsLearnToPlayBattle || IsDsaTutorialBattle)
         {
             NotifyTutorialAction(
                 completedAction);
@@ -6360,175 +6459,26 @@ UpdateReplayContext();
 
     // 9. DSA / DECK STRUCTURE TUTORIAL  
 
-    private void PrepareDsaTutorialBattle()
-    {
-        if (Session.CurrentMatch == null ||
-            dsaRecyclePrepared)
-        {
-            return;
-        }
-
-        Player player =
-            GetPresentedPlayer();
-
-        dsaRecyclePrepared = true;
-        dsaRecycleResolved = false;
-        dsaRecycleCardCount = 0;
-
-        if (player.DiscardPile.Count == 0 &&
-            player.Deck.RuntimeStorage != null)
-        {
-            for (
-                int i = 0;
-                i < DsaRecycleSampleSize &&
-                player.Deck.RuntimeStorage.Count > 0;
-                i++)
-            {
-                Card? card =
-                    player.Deck.RuntimeStorage.Draw();
-
-                if (card != null)
-                {
-                    player.DiscardPile.Add(card);
-                }
-            }
-        }
-
-        dsaRecycleCardCount =
-            player.DiscardPile.Count;
-    }
-
     private async Task HandleDsaInformationalAdvance()
     {
-        if (!IsDsaTutorialBattle ||
-            Session.CurrentMatch == null)
-        {
+        if (!IsDsaTutorialBattle || Session.CurrentMatch == null)
             return;
-        }
 
-        TutorialAction action =
-            RequiredTutorialAction;
-
-        if (action ==
-            TutorialAction.PrepareRecycle)
+        // Priority Queue has no manual utility action. Once its utility
+        // explanation is acknowledged, discard its two sample cards so the
+        // real End-phase draw path can demonstrate recycling.
+        if (Session.Tutorial.CurrentTutorial == TutorialType.PriorityQueue &&
+            RequiredTutorialAction == TutorialAction.ContinuePhase &&
+            Session.CurrentMatch.CurrentPhase == MatchPhase.Utility)
         {
-            PrepareDsaRecycleState();
-
-            NotifyTutorialAction(
-                TutorialAction.PrepareRecycle);
+            Player player = GetPresentedPlayer();
+            if (player.Deck.Name.StartsWith("DSA Tutorial", StringComparison.Ordinal))
+                DiscardRemainingTutorialSampleCards(player);
         }
 
         await Task.CompletedTask;
     }
 
-    private void PrepareDsaRecycleState()
-    {
-        if (Session.CurrentMatch == null ||
-            dsaRecycleResolved)
-        {
-            return;
-        }
-
-        Player player =
-            GetPresentedPlayer();
-
-        if (player.Deck.RuntimeStorage == null ||
-            player.DiscardPile.Count == 0)
-        {
-            return;
-        }
-        while (player.Deck.RuntimeStorage.Count > 0)
-        {
-            player.Deck.RuntimeStorage.Draw();
-        }
-    }
-
-    private async Task ResolveDsaRecycleDemonstration()
-    {
-        if (Session.CurrentMatch == null ||
-            dsaRecycleResolved ||
-            RequiredTutorialAction !=
-                TutorialAction.ObserveRecycle)
-        {
-            return;
-        }
-
-        Player player =
-            GetPresentedPlayer();
-
-        if (player.Deck.RuntimeStorage == null)
-            return;
-
-        int recycledCount =
-            dsaRecycleCardCount;
-        if (player.DiscardPile.Count > 0)
-        {
-            List<Card> recycled =
-                player.DiscardPile.ToList();
-
-            recycledCount =
-                recycled.Count;
-
-            player.DiscardPile.Clear();
-
-            foreach (Card card in recycled)
-            {
-                player.Deck.RuntimeStorage.Add(card);
-            }
-
-            BattleLog.WriteSystem(
-                GetRecycleLogMessage(
-                    player.Deck.Structure,
-                    recycledCount));
-        }
-        else
-        {
-            BattleLog.WriteSystem(
-                GetRecycleLogMessage(
-                    player.Deck.Structure,
-                    recycledCount));
-        }
-
-        dsaRecycleResolved = true;
-
-        NotifyTutorialAction(
-            TutorialAction.ObserveRecycle);
-
-        StateHasChanged();
-
-        await Task.CompletedTask;
-    }
-
-    private string GetRecycleLogMessage(
-        DeckStructure structure,
-        int count)
-    {
-        string destination =
-            structure switch
-            {
-                DeckStructure.Queue =>
-                    "the rear of the Queue",
-
-                DeckStructure.PriorityQueue =>
-                    "the Priority Queue using each card's priority",
-
-                DeckStructure.Stack =>
-                    "the top of the Stack",
-
-                DeckStructure.RandomList =>
-                    "the Random List draw pool",
-
-                DeckStructure.LinkedList =>
-                    "the tail of the Linked List",
-
-                _ =>
-                    "the deck"
-            };
-
-        return
-            $"{count} discarded card(s) recycled into {destination}.";
-    }
-    
     // 10. MATCH COMPLETION / SURRENDER
 
     private bool IsBattleFinished
@@ -7168,6 +7118,18 @@ private async Task CopyReplay()
 
   if (match.CurrentPhase == MatchPhase.Placement)
 {
+    if (IsDsaTutorialBattle)
+    {
+        if (RequiredTutorialAction != TutorialAction.DeployAttack)
+            return false;
+
+        Card? deployed = slot == 1
+            ? player.AttackSlot1
+            : player.AttackSlot2;
+        if (deployed != null)
+            return false;
+    }
+
     if (IsLearnToPlayBattle &&
         RequiredTutorialAction ==
             TutorialAction.DeployAttack)
@@ -7350,6 +7312,12 @@ private bool CanInteractWithCharacter(
 
     if (match.CurrentPhase == MatchPhase.Placement)
     {
+        if (IsDsaTutorialBattle &&
+            RequiredTutorialAction != TutorialAction.DeployCharacter)
+        {
+            return false;
+        }
+
         return HasLegalPlacementCharacterAction(
             player);
     }

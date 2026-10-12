@@ -52,7 +52,33 @@ public static class MatchManager
 
         DeckStructureManager.PrepareDeckForMatch(player);
 
+        // For the Priority Queue tutorial, keep the sample Character out of
+        // the opening hand while the runtime priority queue is initialized.
+        // The queue stores its priority key at Add-time, so we can restore
+        // the card's real priority (5) before gameplay and still demonstrate
+        // that it is drawn first after the tutorial recycles it.
+        Card? priorityQueueSampleCharacter = null;
+        bool isPriorityQueueTutorial =
+            player.Deck.Name.StartsWith("DSA Tutorial", StringComparison.Ordinal) &&
+            player.Deck.Structure == DeckStructure.PriorityQueue;
+
+        if (isPriorityQueueTutorial)
+        {
+            priorityQueueSampleCharacter = player.Deck.Cards
+                .LastOrDefault(card => card.Type == CardType.Character);
+
+            if (priorityQueueSampleCharacter != null)
+            {
+                priorityQueueSampleCharacter.Priority = 1;
+            }
+        }
+
         player.Deck.InitializeRuntimeStorage();
+
+        if (priorityQueueSampleCharacter != null)
+        {
+            priorityQueueSampleCharacter.Priority = 5;
+        }
 
        HandManager.DrawOpeningHand(
     player,

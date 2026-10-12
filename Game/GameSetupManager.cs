@@ -65,8 +65,7 @@ public static class GameSetupManager
         BotManager.IsTutorialMode = true;
 
         Deck playerDeck =
-            GetDsaTutorialDeck(
-                tutorial);
+            GetDsaTutorialDeck(tutorial);
 
         /*
          * The Bot receives a normal Queue deck.
@@ -89,11 +88,22 @@ public static class GameSetupManager
             true,
             botDeck);
 
-        return BattleEngine.StartMatch(
+        MatchState match = BattleEngine.StartMatch(
             player,
             bot,
             GameMode.BotMatch,
             forcePlayerOneStarts: true);
+
+        if (tutorial == TutorialType.LinkedList)
+        {
+            // These two cards are intentionally in the discard pile before
+            // the tutorial turn, so the player can watch them recycle after
+            // the two reordered nodes have been drawn.
+            match.Player1.DiscardPile.Add(CardFactory.CreateMysticSpike());
+            match.Player1.DiscardPile.Add(CardFactory.CreateArcaneBullets());
+        }
+
+        return match;
     }
 
     public static Deck GetDsaTutorialDeck(
@@ -102,19 +112,19 @@ public static class GameSetupManager
         return tutorial switch
         {
             TutorialType.Queue =>
-                StarterDeckFactory.CreateQueueStarter(),
+                StarterDeckFactory.CreateDsaTutorialDeck(DeckStructure.Queue),
 
             TutorialType.PriorityQueue =>
-                StarterDeckFactory.CreatePriorityStarter(),
+                StarterDeckFactory.CreateDsaTutorialDeck(DeckStructure.PriorityQueue),
 
             TutorialType.Stack =>
-                StarterDeckFactory.CreateStackStarter(),
+                StarterDeckFactory.CreateDsaTutorialDeck(DeckStructure.Stack),
 
             TutorialType.RandomList =>
-                StarterDeckFactory.CreateRandomStarter(),
+                StarterDeckFactory.CreateDsaTutorialDeck(DeckStructure.RandomList),
 
             TutorialType.LinkedList =>
-                StarterDeckFactory.CreateLinkedStarter(),
+                StarterDeckFactory.CreateDsaTutorialDeck(DeckStructure.LinkedList),
 
             _ =>
                 throw new ArgumentException(

@@ -24,6 +24,7 @@ public enum TutorialAction
     ContinuePhase,
     PrepareRecycle,
     ObserveRecycle,
+    ViewDiscardPile,
     Surrender,
     ObserveBoard,
     ReturnToTutorial,
@@ -861,886 +862,161 @@ private static readonly IReadOnlyList<TutorialStep>
         }
     };
 
-private static readonly IReadOnlyList<TutorialStep>
-    QueueSteps =
-    new List<TutorialStep>
+private static readonly IReadOnlyList<TutorialStep> QueueSteps =
+        BuildDsaSteps(DeckStructure.Queue);
+
+    private static readonly IReadOnlyList<TutorialStep> PriorityQueueSteps =
+        BuildDsaSteps(DeckStructure.PriorityQueue);
+
+    private static readonly IReadOnlyList<TutorialStep> StackSteps =
+        BuildDsaSteps(DeckStructure.Stack);
+
+    private static readonly IReadOnlyList<TutorialStep> RandomListSteps =
+        BuildDsaSteps(DeckStructure.RandomList);
+
+    private static readonly IReadOnlyList<TutorialStep> LinkedListSteps =
+        BuildDsaSteps(DeckStructure.LinkedList);
+
+    private static IReadOnlyList<TutorialStep> BuildDsaSteps(
+        DeckStructure structure)
     {
-        new()
+        string structureName = structure switch
         {
-            Number = 0,
-            Title = "How a Queue Works",
-            Message =
-                "A Queue follows First-In, First-Out (FIFO) order: the card at the front is " +
-                "the next one retrieved.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
+            DeckStructure.Queue => "Queue",
+            DeckStructure.PriorityQueue => "Priority Queue",
+            DeckStructure.Stack => "Stack",
+            DeckStructure.RandomList => "Random List",
+            DeckStructure.LinkedList => "Linked List",
+            _ => "Deck"
+        };
+
+        TutorialAction utilityAction = structure switch
         {
-            Number = 1,
-            Title = "Peek at the Queue",
-            Message =
-                "Select the Queue deck and use Peek. It lets you inspect up to the next two " +
-                "cards without drawing them.",
-            RequiredAction =
-                TutorialAction.PeekDeck,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
+            DeckStructure.Queue or DeckStructure.Stack => TutorialAction.PeekDeck,
+            DeckStructure.RandomList => TutorialAction.ViewDrawPool,
+            DeckStructure.LinkedList => TutorialAction.StartReorderNodes,
+            _ => TutorialAction.Acknowledge
+        };
+
+        string utilityTitle = structure switch
         {
-            Number = 2,
-            Title = "Understanding FIFO Order",
-            Message =
-                "The card shown nearest the front of the Queue will be retrieved first. " +
-                "Cards behind it must wait until the earlier cards leave.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
+            DeckStructure.Queue => "Peek at the Queue",
+            DeckStructure.Stack => "Peek at the Stack",
+            DeckStructure.RandomList => "Inspect the Random List",
+            DeckStructure.LinkedList => "Reorder the Linked List",
+            _ => "Priority Queue Utility Phase"
+        };
+
+        string utilityMessage = structure switch
         {
-            Number = 3,
-            Title = "Advance to Placement",
-            Message =
-                "Press Continue through the remaining Utility action and enter Placement.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
+            DeckStructure.Queue =>
+                "Click the deck and choose Peek to inspect the next two cards. After you inspect them, both sample cards move to the discard pile for the recycling demonstration. Your three starting cards stay in your hand.",
+            DeckStructure.Stack =>
+                "Click the deck and choose Peek to inspect the top two cards. After you inspect them, both sample cards move to the discard pile for the recycling demonstration. Your three starting cards stay in your hand.",
+            DeckStructure.RandomList =>
+                "Click the deck and choose View Draw Pool to inspect the three cards remaining in the random pool. Those three sample cards move to the discard pile after the inspection. Your starting Character and two Attacks stay in your hand.",
+            DeckStructure.LinkedList =>
+                "Click the deck and choose Reorder Nodes. Move one of the two remaining nodes and finish. These nodes stay connected in the deck; they will be drawn before the two cards already in the discard pile are recycled.",
+            _ =>
+                "The Priority Queue has no manual peek or reorder action. Continue to place the sample Attack, Ice Shards (priority 2), and Character, Wanderer Red Panda (priority 5), in the discard pile. When recycled, the Character should be drawn first because it has higher priority."
+        };
+
+        List<TutorialStep> steps = new();
+        void Add(int number, string title, string message,
+            TutorialAction action, string target) => steps.Add(new TutorialStep
+            {
+                Number = number,
+                Title = title,
+                Message = message,
+                RequiredAction = action,
+                HighlightTarget = target,
+                RestrictInput = true
+            });
+
+        Add(0, $"How the {structureName} Works",
+            structure switch
+            {
+                DeckStructure.Queue => "A Queue draws from the front: first in, first out (FIFO). The two sample cards will be recycled in the order they entered the discard pile.",
+                DeckStructure.Stack => "A Stack draws from the top: last in, first out (LIFO). Recycled cards are pushed onto the top, so the last card pushed is drawn first.",
+                DeckStructure.PriorityQueue => "A Priority Queue retrieves higher-priority cards first. Watch the Character (priority 5) come before Ice Shards (priority 2), even if discard order is different.",
+                DeckStructure.RandomList => "A Random List chooses a card randomly from the remaining pool. You will inspect the three-card pool and later see cards drawn randomly after they are recycled.",
+                _ => "A Linked List stores cards as connected nodes. Drawing removes the head node; reordering changes which existing node comes first. Recycled cards are randomized among themselves and appended to the tail."
+            }, TutorialAction.Acknowledge, "player-deck");
+
+        Add(steps.Count, utilityTitle, utilityMessage, utilityAction,
+            structure == DeckStructure.LinkedList ? "player-deck" :
+            structure == DeckStructure.PriorityQueue ? "discard-pile" : "player-deck");
+
+        if (structure == DeckStructure.LinkedList)
         {
-            Number = 4,
-            Title = "Deploy from Your Queue",
-            Message =
-                "Your hand was filled from the Queue in FIFO order. Deploy at least one " +
-                "Attack (up to two) to your field, then continue. The open hand slots will " +
-                "help show the cards drawn during End.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-hand",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 5,
-            Title = "Complete Your Placement Phase",
-            Message =
-                "Your Placement is done. Press Continue to enter the Attack phase.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 6,
-            Title = "Complete Your Attack Phase",
-            Message =
-                "Your Attack action is done. Press Continue to proceed to End.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 7,
-            Title = "When Cards Are Recycled",
-            Message =
-                "When the deck runs out of cards, discarded cards can be recycled so they " +
-                "can be drawn again.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 8,
-            Title = "Prepare Queue Recycling",
-            Message =
-                "The tutorial is setting up a Queue recycling demonstration. Follow the " +
-                "next instruction to see where recycled cards go.",
-            RequiredAction =
-                TutorialAction.PrepareRecycle,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 9,
-            Title = "Run the Recycling Demonstration",
-            Message =
-                "Press Continue to run the Queue recycling demonstration.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 10,
-            Title = "Recycled Cards Join the Rear",
-            Message =
-                "Recycled cards are added to the back of the Queue. Cards already near the " +
-                "front are still retrieved before the newly recycled cards.",
-            RequiredAction =
-                TutorialAction.ObserveRecycle,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 11,
-            Title = "Queue Tutorial Complete",
-            Message =
-                "You've seen FIFO retrieval, Peek, and how discarded cards return to the " +
-                "Queue.",
-            RequiredAction =
-                TutorialAction.FinishTutorial,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
+            Add(steps.Count, "Move a Node",
+                "Move one of the two nodes to a different position. This changes the order in which those two cards will be drawn.",
+                TutorialAction.MoveReorderNode, "linked-list-nodes");
+            Add(steps.Count, "Confirm the New Order",
+                "Finish reordering. The same two nodes remain in the deck in the order you selected; they are not discarded as part of this demonstration.",
+                TutorialAction.FinishReorderNodes, "linked-list-nodes");
         }
-    };
-private static readonly IReadOnlyList<TutorialStep>
-    PriorityQueueSteps =
-    new List<TutorialStep>
-    {
-        new()
+
+        Add(steps.Count, "Continue to Placement",
+            "The Utility demonstration is complete. Press Continue to enter Placement. The three cards in your hand are your Character and two Attacks.",
+            TutorialAction.ContinuePhase, "continue-button");
+
+        if (structure == DeckStructure.Stack)
         {
-            Number = 0,
-            Title = "How a Priority Queue Works",
-            Message =
-                "A Priority Queue retrieves cards by priority instead of arrival order. In " +
-                "this game, a higher numeric priority is retrieved before a lower one.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 1,
-            Title = "Automatic Priority Retrieval",
-            Message =
-                "Priority Queue draws happen automatically. Unlike the other deck " +
-                "structures, clicking this deck does not provide a normal Utility-phase " +
-                "deck action.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 2,
-            Title = "Advance to Placement",
-            Message =
-                "Press Continue and watch which cards the Priority Queue supplies to your " +
-                "hand.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 3,
-            Title = "Deploy by Priority",
-            Message =
-                "Your hand reflects Priority Queue retrieval. Deploy at least one Attack " +
-                "(up to two), then continue. The open hand slots will help reveal the next " +
-                "cards retrieved by priority during End.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-hand",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 4,
-            Title = "Complete Your Placement Phase",
-            Message =
-                "Your Placement is done. Press Continue to enter the Attack phase.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 5,
-            Title = "Complete Your Attack Phase",
-            Message =
-                "Your Attack action is done. Press Continue to proceed to End.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 6,
-            Title = "Recycling and Priority",
-            Message =
-                "When discarded cards are recycled, each card is inserted according to its " +
-                "priority rather than simply being placed at the front or back.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 7,
-            Title = "Prepare Priority Queue Recycling",
-            Message =
-                "The tutorial is setting up a Priority Queue recycling demonstration. " +
-                "Follow the next instruction to see how priorities affect insertion.",
-            RequiredAction =
-                TutorialAction.PrepareRecycle,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 8,
-            Title = "Run the Recycling Demonstration",
-            Message =
-                "Press Continue to run the Priority Queue recycling demonstration.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 9,
-            Title = "Recycled Cards Return by Priority",
-            Message =
-                "Recycled cards return to their priority-based positions. A high-priority " +
-                "card can be retrieved before cards that were already waiting.",
-            RequiredAction =
-                TutorialAction.ObserveRecycle,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 10,
-            Title = "Priority Queue Tutorial Complete",
-            Message =
-                "You've seen priority-based retrieval and how recycled cards are placed " +
-                "according to priority.",
-            RequiredAction =
-                TutorialAction.FinishTutorial,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
+            Add(steps.Count, "Watch Automatic Stack Placement",
+                "Stack placement is automatic. Watch the Character and both Attacks move from your hand onto the field. The hand should be empty before you continue.",
+                TutorialAction.ObserveAutomaticPlacement, "player-field");
         }
-    };
-private static readonly IReadOnlyList<TutorialStep>
-    StackSteps =
-    new List<TutorialStep>
-    {
-        new()
+        else
         {
-            Number = 0,
-            Title = "How a Stack Works",
-            Message =
-                "A Stack follows Last-In, First-Out (LIFO) order: the card most recently " +
-                "placed on top is retrieved first.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 1,
-            Title = "Peek at the Stack",
-            Message =
-                "Select the Stack deck and use Peek to inspect up to the top two cards " +
-                "without drawing them.",
-            RequiredAction =
-                TutorialAction.PeekDeck,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 2,
-            Title = "Understanding LIFO Order",
-            Message =
-                "The top card is retrieved first. Cards underneath it remain unavailable " +
-                "until the cards above them have been removed.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 3,
-            Title = "Advance to Placement",
-            Message =
-                "Press Continue to enter Placement. With a Stack deck, eligible Characters " +
-                "and Attacks are deployed automatically.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 4,
-            Title = "Automatic Stack Deployment",
-            Message =
-                "Watch as the Stack automatically deploys eligible cards during Placement.",
-            RequiredAction =
-                TutorialAction.ObserveAutomaticPlacement,
-            HighlightTarget =
-                "player-field",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 5,
-            Title = "Understanding Automatic Placement",
-            Message =
-                "The eligible cards have been deployed automatically. This reduces manual " +
-                "control but follows the Stack's direct-play behavior. Make sure at least " +
-                "one Attack is deployed before continuing.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-field",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 6,
-            Title = "Complete Your Placement Phase",
-            Message =
-                "Placement is complete. Press Continue to enter the Attack phase.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 7,
-            Title = "Complete Your Attack Phase",
-            Message =
-                "Your Attack action is done. Press Continue to proceed to End.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 8,
-            Title = "When Cards Are Recycled",
-            Message =
-                "Discarded cards can return to the Stack. Each recycled card is pushed onto " +
-                "the top.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 9,
-            Title = "Prepare Stack Recycling",
-            Message =
-                "The tutorial is setting up a Stack recycling demonstration. The next step " +
-                "shows how the top of the Stack changes.",
-            RequiredAction =
-                TutorialAction.PrepareRecycle,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 10,
-            Title = "Run the Recycling Demonstration",
-            Message =
-                "Press Continue to run the Stack recycling demonstration.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 11,
-            Title = "Recycling onto the Stack",
-            Message =
-                "Each recycled card is pushed onto the top. Because the Stack uses LIFO, " +
-                "the last card pushed on top is the first one retrieved.",
-            RequiredAction =
-                TutorialAction.ObserveRecycle,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 12,
-            Title = "Stack Tutorial Complete",
-            Message =
-                "You've seen LIFO retrieval, Peek, automatic Placement, and how recycled " +
-                "cards return to the top of the Stack.",
-            RequiredAction =
-                TutorialAction.FinishTutorial,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
+            Add(steps.Count, "Place Your Character",
+                "During Placement, choose Sage Red Panda from your hand and deploy it to the Character slot. This uses the Character card from your hand.",
+                TutorialAction.DeployCharacter, "player-character");
+            Add(steps.Count, "Place Your First Attack",
+                "Choose either Attack card from your hand and place it in an empty Attack slot. Placement removes the card from your hand; you will use the deployed attack during the Attack phase.",
+                TutorialAction.DeployAttack, "player-field");
+            Add(steps.Count, "Place Your Second Attack",
+                "Place your remaining Attack card in the other Attack slot. Your Character and both Attacks should now be on the field and your hand should be empty.",
+                TutorialAction.DeployAttack, "player-field");
         }
-    };
-private static readonly IReadOnlyList<TutorialStep>
-    RandomListSteps =
-    new List<TutorialStep>
-    {
-        new()
-        {
-            Number = 0,
-            Title = "How Random Retrieval Works",
-            Message =
-                "A Random List draws from the cards currently available in its draw pool. " +
-                "It does not guarantee a fixed retrieval order.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 1,
-            Title = "View the Draw Pool",
-            Message =
-                "Select the Random List deck and choose View Draw Pool to see which cards " +
-                "are currently available to be drawn.",
-            RequiredAction =
-                TutorialAction.ViewDrawPool,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 2,
-            Title = "Understanding Random Draws",
-            Message =
-                "Viewing the pool shows which cards are available, not which card will be " +
-                "drawn next. The next card is selected randomly from that pool.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 3,
-            Title = "Advance to Placement",
-            Message =
-                "Press Continue and observe the hand supplied by Random List draws.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 4,
-            Title = "Deploy from the Draw Pool",
-            Message =
-                "Your hand was drawn from the available pool. Deploy at least one Attack " +
-                "(up to two), then continue. The open hand slots will help show random " +
-                "draws after recycling.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-hand",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 5,
-            Title = "Complete Your Placement Phase",
-            Message =
-                "Your Placement is done. Press Continue to enter the Attack phase.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 6,
-            Title = "Complete Your Attack Phase",
-            Message =
-                "Your Attack action is done. Press Continue to proceed to End.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 7,
-            Title = "Returning Cards to the Pool",
-            Message =
-                "Recycled cards return to the draw pool and become available for future " +
-                "random draws.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 8,
-            Title = "Prepare Random List Recycling",
-            Message =
-                "The tutorial is setting up a Random List recycling demonstration. The next " +
-                "step shows the recycled cards returning to the pool.",
-            RequiredAction =
-                TutorialAction.PrepareRecycle,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 9,
-            Title = "Run the Recycling Demonstration",
-            Message =
-                "Press Continue to run the Random List recycling demonstration.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 10,
-            Title = "Recycling into the Draw Pool",
-            Message =
-                "The recycled cards are available in the draw pool again. Their previous " +
-                "discard order does not determine which card is drawn first.",
-            RequiredAction =
-                TutorialAction.ObserveRecycle,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 11,
-            Title = "Random List Tutorial Complete",
-            Message =
-                "You've seen the draw pool, random retrieval, and how recycled cards become " +
-                "available for future draws.",
-            RequiredAction =
-                TutorialAction.FinishTutorial,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        }
-    };
-private static readonly IReadOnlyList<TutorialStep>
-    LinkedListSteps =
-    new List<TutorialStep>
-    {
-        new()
-        {
-            Number = 0,
-            Title = "How a Linked List Works",
-            Message =
-                "A Linked List stores cards as connected nodes. Retrieval starts at the " +
-                "head and follows each node's link to the next card.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 1,
-            Title = "Reorder the Nodes",
-            Message =
-                "Select the Linked List deck and choose Reorder Nodes to change the order " +
-                "of its card nodes.",
-            RequiredAction =
-                TutorialAction.StartReorderNodes,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 2,
-            Title = "Move a Card Node",
-            Message =
-                "Move one card node to a different position. This changes the sequence in " +
-                "which cards will be retrieved.",
-            RequiredAction =
-                TutorialAction.MoveReorderNode,
-            HighlightTarget =
-                "linked-list-nodes",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 3,
-            Title = "Confirm the New Order",
-            Message =
-                "Finish the reorder action to keep the new node order.",
-            RequiredAction =
-                TutorialAction.FinishReorderNodes,
-            HighlightTarget =
-                "linked-list-nodes",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 4,
-            Title = "Understanding Head-to-Tail Order",
-            Message =
-                "The first node is the head. Cards are retrieved from the head onward, " +
-                "following the links through the sequence you arranged.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 5,
-            Title = "Advance to Placement",
-            Message =
-                "Press Continue and observe the cards supplied by the Linked List's current " +
-                "order.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 6,
-            Title = "Deploy from Your Linked List",
-            Message =
-                "Your hand reflects the linked-node order. Deploy at least one Attack (up " +
-                "to two), then continue. The open hand slots will help show cards drawn " +
-                "later from the updated list.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "player-hand",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 7,
-            Title = "Complete Your Placement Phase",
-            Message =
-                "Your Placement is done. Press Continue to enter the Attack phase.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 8,
-            Title = "Complete Your Attack Phase",
-            Message =
-                "Your Attack action is done. Press Continue to proceed to End.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 9,
-            Title = "Appending Recycled Nodes",
-            Message =
-                "Recycled cards are appended as new nodes at the tail of the Linked List, " +
-                "after the nodes already there.",
-            RequiredAction =
-                TutorialAction.Acknowledge,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 10,
-            Title = "Prepare Linked List Recycling",
-            Message =
-                "The tutorial is setting up a Linked List recycling demonstration. The next " +
-                "step shows recycled cards being appended to the tail.",
-            RequiredAction =
-                TutorialAction.PrepareRecycle,
-            HighlightTarget =
-                "discard-pile",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 11,
-            Title = "Run the Recycling Demonstration",
-            Message =
-                "Press Continue to run the Linked List recycling demonstration.",
-            RequiredAction =
-                TutorialAction.ContinuePhase,
-            HighlightTarget =
-                "continue-button",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 12,
-            Title = "Recycling to the Tail",
-            Message =
-                "Each recycled card becomes a node at the tail. Nodes closer to the head " +
-                "remain earlier in the retrieval sequence.",
-            RequiredAction =
-                TutorialAction.ObserveRecycle,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        },
-        new()
-        {
-            Number = 13,
-            Title = "Linked List Tutorial Complete",
-            Message =
-                "You've seen linked-list retrieval, node reordering, and how recycled cards " +
-                "are appended to the tail.",
-            RequiredAction =
-                TutorialAction.FinishTutorial,
-            HighlightTarget =
-                "player-deck",
-            RestrictInput =
-                true
-        }
-    };
+
+        Add(steps.Count, "Continue to Attack",
+            "Placement is complete and your hand should be empty. Press Continue to enter the Attack phase; you will use the Character's deployed attacks there.",
+            TutorialAction.ContinuePhase, "continue-button");
+        Add(steps.Count, "Use Your First Attack",
+            "During the Attack phase, click one of your deployed attacks to resolve it against the opponent.",
+            TutorialAction.UseAttack, "player-field");
+        Add(steps.Count, "Use Your Second Attack",
+            "Now use the other deployed attack. The cards remain deployed on the field; using them is separate from placing them and does not put them back in your hand.",
+            TutorialAction.UseAttack, "player-field");
+        Add(steps.Count, "Inspect the Discard Pile",
+            "Before the End phase resolves, click the discard pile to inspect its cards and order. This viewer is available only during this DSA tutorial. Close it when you have finished looking.",
+            TutorialAction.ViewDiscardPile, "discard-pile");
+        Add(steps.Count, "Watch the End-Phase Recycling",
+            structure switch
+            {
+                DeckStructure.Queue => "Press Continue. With the Queue empty, its discarded cards are enqueued in discard order. They will be drawn from the front, first in, first out.",
+                DeckStructure.Stack => "Press Continue. With the Stack empty, each discarded card is pushed onto the top. The last card pushed becomes the next card drawn.",
+                DeckStructure.PriorityQueue => "Press Continue. With the Priority Queue empty, the recycled Character (priority 5) is reinserted ahead of Ice Shards (priority 2), regardless of discard order.",
+                DeckStructure.RandomList => "Press Continue. With the random pool empty, the discarded cards return to the pool. Future draws choose randomly rather than following discard order.",
+                _ => "Press Continue. The two reordered Linked List nodes are drawn first. Once they are gone, the two cards from the discard pile are randomized and appended to the tail as new nodes; the original nodes are not shuffled or recycled."
+            }, TutorialAction.ContinuePhase, "continue-button");
+        Add(steps.Count, "Observe the Recycled Cards",
+            structure switch
+            {
+                DeckStructure.Queue => "Back in Utility, the two recycled cards should be in your hand and the deck should be empty. The Queue draws them in queue order.",
+                DeckStructure.Stack => "Back in Utility, the two recycled cards should be in your hand and the deck should be empty. The Stack draws in reverse push order.",
+                DeckStructure.PriorityQueue => "Back in Utility, the deck should be empty and both recycled cards should be in your hand. Wanderer Red Panda (priority 5) should appear before Ice Shards (priority 2).",
+                DeckStructure.RandomList => "Back in Utility, three recycled cards should be in your hand and the random pool should be empty. Their hand order reflects random retrieval.",
+                _ => "Back in Utility, four cards should be in your hand and the deck should be empty: the two original reordered nodes were drawn first, followed by the two recycled cards that were shuffled before being appended to the tail."
+            }, TutorialAction.Acknowledge, "player-hand");
+        Add(steps.Count, $"{structureName} Tutorial Complete",
+            "You've inspected the Utility action, completed Placement, used your deployed attacks, inspected the discard pile, and observed how this data structure retrieves recycled cards.",
+            TutorialAction.FinishTutorial, "player-deck");
+
+        return steps;
+    }
+
     public static void StartTutorial(
     TutorialState state,
     TutorialType tutorial)
